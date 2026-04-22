@@ -4,6 +4,12 @@ from sqlalchemy.orm import Session
 from app.services.test_result_service import list_recent_test_results
 
 
+def _datetime_to_isoformat(value):
+    if value is None:
+        return None
+    return value.isoformat()
+
+
 def build_test_result_workbook(database_session: Session) -> Workbook:
     workbook = Workbook()
     worksheet = workbook.active
@@ -52,16 +58,15 @@ def build_test_result_workbook(database_session: Session) -> Workbook:
                 test_result.field_08,
                 test_result.field_09,
                 test_result.field_10,
-                test_result.low_test_started_at,
-                test_result.low_test_ended_at,
+                _datetime_to_isoformat(test_result.low_test_started_at),
+                _datetime_to_isoformat(test_result.low_test_ended_at),
                 test_result.low_test_delta,
-                test_result.high_test_started_at,
-                test_result.high_test_ended_at,
+                _datetime_to_isoformat(test_result.high_test_started_at),
+                _datetime_to_isoformat(test_result.high_test_ended_at),
                 test_result.high_test_delta,
-                str(test_result.created_at),
-                str(test_result.updated_at),
+                _datetime_to_isoformat(test_result.created_at),
+                _datetime_to_isoformat(test_result.updated_at),
             ]
         )
 
     return workbook
-

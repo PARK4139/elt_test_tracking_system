@@ -1,5 +1,5 @@
 @echo off
-setlocal EnableExtensions
+setlocal EnableExtensions EnableDelayedExpansion
 
 cd /d "%~dp0"
 if errorlevel 1 (
@@ -21,24 +21,24 @@ where py >nul 2>nul
 if not errorlevel 1 (
     py "%SCRIPT_PATH%"
     set "EXIT_CODE=%ERRORLEVEL%"
-    if not "%EXIT_CODE%"=="0" (
+    if not "!EXIT_CODE!"=="0" (
         echo.
-        echo [ERROR] Python script failed with exit code %EXIT_CODE%.
+        echo [ERROR] Python script failed with exit code !EXIT_CODE!.
         pause
     )
-    exit /b %EXIT_CODE%
+    exit /b !EXIT_CODE!
 )
 
 where python >nul 2>nul
 if not errorlevel 1 (
     python "%SCRIPT_PATH%"
     set "EXIT_CODE=%ERRORLEVEL%"
-    if not "%EXIT_CODE%"=="0" (
+    if not "!EXIT_CODE!"=="0" (
         echo.
-        echo [ERROR] Python script failed with exit code %EXIT_CODE%.
+        echo [ERROR] Python script failed with exit code !EXIT_CODE!.
         pause
     )
-    exit /b %EXIT_CODE%
+    exit /b !EXIT_CODE!
 )
 
 echo [ERROR] Neither "py" nor "python" was found in PATH.

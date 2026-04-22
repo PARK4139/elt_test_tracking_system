@@ -9,4 +9,3 @@ from app.db import get_database_session
 
 database_session_dependency = Annotated[Session, Depends(get_database_session)]
 current_role_name_dependency = Annotated[str, Depends(get_current_role_name)]
-

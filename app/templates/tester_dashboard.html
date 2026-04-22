@@ -1,43 +1,79 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="card">
-    <h2>Tester Dashboard</h2>
-    <p>Multi-row progressive input placeholder. Partial row updates are supported by API.</p>
-    <p>Future inline editable grid hooks are intentionally reserved in this template.</p>
+    <h2>TESTER 대시보드</h2>
+    <p>역할: <strong>{{ current_role_name }}</strong></p>
 </section>
 
 <section class="card">
-    <h3>Recent Rows</h3>
-    <table class="basic_table">
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>key_1</th>
-                <th>key_2</th>
-                <th>key_3</th>
-                <th>low_test_delta</th>
-                <th>high_test_delta</th>
-                <th>updated_at</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for row in recent_test_results %}
-            <tr>
-                <td>{{ row.id }}</td>
-                <td>{{ row.key_1 }}</td>
-                <td>{{ row.key_2 }}</td>
-                <td>{{ row.key_3 }}</td>
-                <td>{{ row.low_test_delta or "" }}</td>
-                <td>{{ row.high_test_delta or "" }}</td>
-                <td>{{ row.updated_at }}</td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="7">No rows yet.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <h3>최근 행</h3>
+    <p>시험 데이터 입력/수정 후 저장하고, 저온시험/고온시험 버튼을 순서대로 진행하세요.</p>
+    <button id="add_row_button" type="button">행 추가</button>
+    <div class="tester_table_wrap">
+        <table id="tester_grid_table" class="basic_table">
+            <thead>
+                <tr>
+                    <th class="hidden_id_column">ID</th>
+                    <th>키 1</th>
+                    <th>키 2</th>
+                    <th>키 3</th>
+                    <th>항목 01</th>
+                    <th>항목 02</th>
+                    <th>항목 03</th>
+                    <th>항목 04</th>
+                    <th>항목 05</th>
+                    <th>항목 06</th>
+                    <th>항목 07</th>
+                    <th>항목 08</th>
+                    <th>항목 09</th>
+                    <th>항목 10</th>
+                    <th>저온시험 시작 시각</th>
+                    <th>저온시험 종료 시각</th>
+                    <th>저온시험 소요시간</th>
+                    <th>고온시험 시작 시각</th>
+                    <th>고온시험 종료 시각</th>
+                    <th>고온시험 소요시간</th>
+                    <th>동작</th>
+                </tr>
+            </thead>
+            <tbody id="tester_grid_body">
+                {% for row in recent_test_results %}
+                <tr class="editable_row" data-id="{{ row.id }}">
+                    <td class="id_cell hidden_id_column">{{ row.id }}</td>
+                    <td><input data-field="key_1" value="{{ row.key_1 or '' }}"></td>
+                    <td><input data-field="key_2" value="{{ row.key_2 or '' }}"></td>
+                    <td><input data-field="key_3" value="{{ row.key_3 or '' }}"></td>
+                    <td><input data-field="field_01" value="{{ row.field_01 or '' }}"></td>
+                    <td><input data-field="field_02" value="{{ row.field_02 or '' }}"></td>
+                    <td><input data-field="field_03" value="{{ row.field_03 or '' }}"></td>
+                    <td><input data-field="field_04" value="{{ row.field_04 or '' }}"></td>
+                    <td><input data-field="field_05" value="{{ row.field_05 or '' }}"></td>
+                    <td><input data-field="field_06" value="{{ row.field_06 or '' }}"></td>
+                    <td><input data-field="field_07" value="{{ row.field_07 or '' }}"></td>
+                    <td><input data-field="field_08" value="{{ row.field_08 or '' }}"></td>
+                    <td><input data-field="field_09" value="{{ row.field_09 or '' }}"></td>
+                    <td><input data-field="field_10" value="{{ row.field_10 or '' }}"></td>
+                    <td class="low_test_started_at_cell">{{ row.low_test_started_at or "" }}</td>
+                    <td class="low_test_ended_at_cell">{{ row.low_test_ended_at or "" }}</td>
+                    <td class="low_test_delta_cell">{{ row.low_test_delta or "" }}</td>
+                    <td class="high_test_started_at_cell">{{ row.high_test_started_at or "" }}</td>
+                    <td class="high_test_ended_at_cell">{{ row.high_test_ended_at or "" }}</td>
+                    <td class="high_test_delta_cell">{{ row.high_test_delta or "" }}</td>
+                    <td>
+                        <button type="button" class="upsert_button">저장</button>
+                        <button type="button" class="low_test_start_button">저온시험 시작</button>
+                        <button type="button" class="low_test_end_button">저온시험 종료</button>
+                        <button type="button" class="high_test_start_button">고온시험 시작</button>
+                        <button type="button" class="high_test_end_button">고온시험 종료</button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="21">행이 없습니다.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </section>
 {% endblock %}
-

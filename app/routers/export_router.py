@@ -26,4 +26,3 @@ def export_test_results_as_excel(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": "attachment; filename=test_results.xlsx"},
     )
-

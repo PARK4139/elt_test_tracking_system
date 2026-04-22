@@ -1,20 +1,29 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ page_title or "elt_test_tracking_system" }}</title>
+    <title>{{ page_title or "ELT 시험 데이터 트래킹 시스템" }}</title>
     <link rel="stylesheet" href="/static/css/app.css">
 </head>
 <body>
     <header class="site_header">
         <div class="site_header_inner">
-            <h1>elt_test_tracking_system</h1>
-            <nav class="site_nav">
-                <a href="/login">Login</a>
-                <a href="/tester/dashboard">Tester</a>
-                <a href="/admin/dashboard">Admin</a>
-            </nav>
+            <h1>
+                {% if request.url.path.startswith('/admin') %}
+                ELT 시험 데이터 트래킹 시스템
+                {% elif request.url.path.startswith('/tester') %}
+                ELT 시험 데이터 입력 시스템
+                {% else %}
+                ELT 시험 데이터 시스템
+                {% endif %}
+            </h1>
+            <a
+                class="qc_mode_button"
+                href="{% if request.url.path.startswith('/admin') %}/tester/dashboard{% else %}/admin/dashboard{% endif %}"
+            >
+                QC MODE
+            </a>
         </div>
     </header>
     <main class="page_container">
@@ -23,4 +32,3 @@
     <script src="/static/js/app.js"></script>
 </body>
 </html>
-

@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from sqlalchemy import DateTime, Integer, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
-from elt_test_tracking_system.app.db import Base
+from app.db import Base
 
 
 def get_utc_now_datetime() -> datetime:

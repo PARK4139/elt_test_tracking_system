@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Request
 
-from app.auth import ROLE_ADMIN, ROLE_MASTER_ADMIN, ensure_role_allowed
+from app.auth import ROLE_MASTER_ADMIN
 from app.deps import current_role_name_dependency, database_session_dependency
 from app.services.test_result_service import list_recent_test_results
 
@@ -14,12 +14,12 @@ def render_admin_dashboard(
     database_session: database_session_dependency,
     current_role_name: current_role_name_dependency,
 ):
-    ensure_role_allowed(current_role_name, {ROLE_ADMIN, ROLE_MASTER_ADMIN})
     recent_test_results = list_recent_test_results(database_session=database_session, limit=50)
     templates = request.app.state.templates
     return templates.TemplateResponse(
-        "admin_dashboard.html",
-        {
+        request=request,
+        name="admin_dashboard.html",
+        context={
             "request": request,
             "page_title": "Admin Dashboard",
             "recent_test_results": recent_test_results,
@@ -27,4 +27,3 @@ def render_admin_dashboard(
             "can_edit_all_data": current_role_name == ROLE_MASTER_ADMIN,
         },
     )
-

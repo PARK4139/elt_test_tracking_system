@@ -3,7 +3,7 @@ from collections.abc import Iterator
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
-from elt_test_tracking_system.app.config import app_settings
+from app.config import app_settings
 
 
 class Base(DeclarativeBase):
@@ -41,6 +41,6 @@ def get_database_session() -> Iterator[Session]:
 
 
 def initialize_database() -> None:
-    from elt_test_tracking_system.app import models
+    from app import models
 
     models.Base.metadata.create_all(bind=engine)

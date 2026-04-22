@@ -24,11 +24,11 @@ class TestResultPartialInput(BaseModel):
     field_09: str | None = None
     field_10: str | None = None
 
-    low_test_started_at: str | None = None
-    low_test_ended_at: str | None = None
+    low_test_started_at: datetime | None = None
+    low_test_ended_at: datetime | None = None
     low_test_delta: str | None = None
-    high_test_started_at: str | None = None
-    high_test_ended_at: str | None = None
+    high_test_started_at: datetime | None = None
+    high_test_ended_at: datetime | None = None
     high_test_delta: str | None = None
 
 
@@ -49,12 +49,11 @@ class TestResultRead(BaseModel):
     field_08: str | None
     field_09: str | None
     field_10: str | None
-    low_test_started_at: str | None
-    low_test_ended_at: str | None
+    low_test_started_at: datetime | None
+    low_test_ended_at: datetime | None
     low_test_delta: str | None
-    high_test_started_at: str | None
-    high_test_ended_at: str | None
+    high_test_started_at: datetime | None
+    high_test_ended_at: datetime | None
     high_test_delta: str | None
     created_at: datetime
     updated_at: datetime
-

@@ -1,17 +1,16 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="card">
-    <h2>Login</h2>
-    <p>Placeholder login page for tester/admin/master_admin flows.</p>
+    <h2>로그인</h2>
+    <p>테스터/관리자/마스터관리자 흐름을 위한 로그인 페이지입니다.</p>
     <form method="post" action="/login" class="form_stack">
-        <label for="user_name">User Name</label>
+        <label for="user_name">사용자 이름</label>
         <input id="user_name" name="user_name" type="text" required>
 
-        <label for="password">Password</label>
+        <label for="password">비밀번호</label>
         <input id="password" name="password" type="password" required>
 
-        <button type="submit">Sign In</button>
+        <button type="submit">로그인</button>
     </form>
 </section>
 {% endblock %}
-

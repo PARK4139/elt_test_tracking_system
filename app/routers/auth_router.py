@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse
 
+from app.auth import ensure_active_user_limit
+
 
 auth_router = APIRouter(tags=["auth"])
 
@@ -14,8 +16,9 @@ def redirect_root_to_login():
 def render_login_page(request: Request):
     templates = request.app.state.templates
     return templates.TemplateResponse(
-        "login.html",
-        {"request": request, "page_title": "Login"},
+        request=request,
+        name="login.html",
+        context={"request": request, "page_title": "Login"},
     )
 
 
@@ -26,6 +29,7 @@ def handle_login_submission(
     password: str = Form(...),
 ):
     _ = password
+    ensure_active_user_limit(user_name=user_name)
     if user_name.lower().startswith("admin"):
         return RedirectResponse(url="/admin/dashboard", status_code=303)
     return RedirectResponse(url="/tester/dashboard", status_code=303)

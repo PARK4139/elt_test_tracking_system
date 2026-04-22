@@ -2,26 +2,29 @@
 
 Internal ELT test tracking system MVP.
 
-## Primary Startup Path (Windows)
+## Setup
 
-The primary startup flow is:
+Install dependencies with uv:
 
+```bash
+uv sync
+```
+
+## Run
+
+Primary startup path (keep this flow):
 1. `run.cmd`
 2. `run.py`
-3. FastAPI application startup
-
-Run:
+3. FastAPI app startup
 
 ```cmd
 run.cmd
 ```
 
-## Setup
+Direct uv run path:
 
-Install dependencies with `uv`:
-
-```cmd
-uv sync
+```bash
+uv run python run.py
 ```
 
 ## Notes

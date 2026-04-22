@@ -7,6 +7,10 @@
 
 * {
     box-sizing: border-box;
+    background-color: #FFFFFF00;
+    font-family: "pretendard", Sans-serif;
+    font-size: 18px;
+    font-weight: 400;
 }
 
 body {
@@ -16,12 +20,18 @@ body {
     color: var(--color_text);
 }
 
+html,
+body {
+    overflow-x: hidden;
+}
+
 .site_header {
     background: var(--color_primary);
     border-bottom: 1px solid var(--color_border);
 }
 
 .site_header_inner {
+    width: 100%;
     max-width: 1200px;
     margin: 0 auto;
     padding: 16px;
@@ -34,6 +44,22 @@ body {
 .site_header h1 {
     margin: 0;
     font-size: 20px;
+    color: #FFFFFF;
+}
+
+.qc_mode_button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 32px;
+    padding: 6px 12px;
+    border: 1px solid #0C3A46;
+    border-radius: 6px;
+    color: #0C3A46;
+    background: #FFFFFF;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 12px;
 }
 
 .site_nav {
@@ -48,6 +74,7 @@ body {
 }
 
 .page_container {
+    width: 100%;
     max-width: 1200px;
     margin: 24px auto;
     padding: 0 16px;
@@ -60,6 +87,7 @@ body {
     border-radius: 8px;
     padding: 16px;
     background: #FFFFFF;
+    overflow: hidden;
 }
 
 .form_stack {
@@ -94,3 +122,48 @@ body {
     text-align: left;
 }
 
+#tester_grid_table input {
+    min-width: 40px;
+    width: 40px;
+    max-width: 80px;
+    min-height: 30px;
+    height: 30px;
+    padding: 4px 8px;
+    border: 1px solid var(--color_border);
+    border-radius: 4px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+#tester_grid_table {
+    width: max-content;
+    min-width: 100%;
+}
+
+#tester_grid_table th,
+#tester_grid_table td {
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+#tester_grid_table td:last-child {
+    white-space: nowrap;
+}
+
+#tester_grid_table td:last-child button {
+    min-height: 30px;
+    height: 30px;
+    padding: 4px 8px;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.hidden_id_column {
+    display: none;
+}
+
+.tester_table_wrap {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+}
