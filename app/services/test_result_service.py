@@ -9,6 +9,8 @@ from app.schemas import TestResultPartialInput
 
 
 PARTIAL_UPDATE_FIELD_NAMES = [
+    "submission_id",
+    "data_writer_name",
     "field_01",
     "field_02",
     "field_03",
@@ -28,13 +30,19 @@ PARTIAL_UPDATE_FIELD_NAMES = [
 ]
 
 
+def _strip_if_string(value):
+    if isinstance(value, str):
+        return value.strip()
+    return value
+
+
 def upsert_partial_test_result(
     database_session: Session,
     test_result_partial_input: TestResultPartialInput,
 ) -> TestResult:
-    key_1 = test_result_partial_input.key_1.strip()
-    key_2 = test_result_partial_input.key_2.strip()
-    key_3 = test_result_partial_input.key_3.strip()
+    key_1 = _strip_if_string(test_result_partial_input.key_1)
+    key_2 = _strip_if_string(test_result_partial_input.key_2)
+    key_3 = _strip_if_string(test_result_partial_input.key_3)
     if not key_1 or not key_2 or not key_3:
         raise ValueError("key_1, key_2, and key_3 must be non-empty after trimming.")
 
@@ -55,7 +63,7 @@ def upsert_partial_test_result(
         database_session.add(existing_test_result)
 
     for field_name in PARTIAL_UPDATE_FIELD_NAMES:
-        new_value = getattr(test_result_partial_input, field_name)
+        new_value = _strip_if_string(getattr(test_result_partial_input, field_name))
         if new_value is not None:
             setattr(existing_test_result, field_name, new_value)
 

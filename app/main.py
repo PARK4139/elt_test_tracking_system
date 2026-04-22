@@ -1,4 +1,5 @@
 from pathlib import Path
+import os
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -20,6 +21,9 @@ def create_app() -> FastAPI:
 
     templates_directory_path = Path(__file__).resolve().parent / "templates"
     app.state.templates = Jinja2Templates(directory=str(templates_directory_path))
+    app.state.templates.env.globals["qc_mode_enabled"] = (
+        os.getenv("QC_MODE", "True").strip().lower() in {"1", "true", "yes", "on"}
+    )
 
     static_directory_path = Path(__file__).resolve().parent / "static"
     app.mount("/static", StaticFiles(directory=str(static_directory_path)), name="static")

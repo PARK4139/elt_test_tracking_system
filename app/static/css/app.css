@@ -45,6 +45,17 @@ body {
     margin: 0;
     font-size: 20px;
     color: #FFFFFF;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.header_logo {
+    height: 44px;
+    width: auto;
+    display: inline-block;
+    background: transparent;
 }
 
 .qc_mode_button {
@@ -53,13 +64,19 @@ body {
     justify-content: center;
     min-height: 29px;
     padding: 6px 12px;
-    border: 1px solid #0C3A46;
+    border: 1px solid #C84D9B;
     border-radius: 6px;
-    color: #0C3A46;
-    background: #FFFFFF;
+    color: #8A2B67;
+    background: #FFEAF6;
     text-decoration: none;
     font-weight: 700;
     font-size: 12px;
+}
+
+.qc_mode_action_button {
+    border: 1px solid #C84D9B;
+    color: #8A2B67;
+    background: #FFEAF6;
 }
 
 button {
@@ -96,6 +113,24 @@ button:disabled {
     color: #0C3A46;
     text-decoration: none;
     font-weight: 600;
+}
+
+.project_standard_button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 29px;
+    padding: 6px 12px;
+    border: 1px solid #0C3A46;
+    border-radius: 6px;
+    color: #0C3A46;
+    background: #FFFFFF;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 15.6px;
+    cursor: pointer;
+    line-height: 1;
+    white-space: nowrap;
 }
 
 .page_container {
@@ -144,7 +179,7 @@ button:disabled {
     text-align: left;
 }
 
-#tester_grid_table input {
+#tester_grid_table input[data-field] {
     min-width: 40px;
     width: 40px;
     max-width: 80px;
@@ -155,6 +190,25 @@ button:disabled {
     border-radius: 4px;
     display: inline-block;
     vertical-align: middle;
+}
+
+#tester_grid_table .row_select_checkbox {
+    width: 18px;
+    height: 18px;
+    min-width: 18px;
+    min-height: 18px;
+}
+
+#tester_grid_table .test_timestamp_input {
+    min-width: 140px;
+    width: 180px;
+    max-width: 240px;
+    min-height: 30px;
+    height: 30px;
+    padding: 4px 8px;
+    border: 1px solid var(--color_border);
+    border-radius: 4px;
+    text-align: center;
 }
 
 #tester_grid_table {
@@ -168,6 +222,33 @@ button:disabled {
     vertical-align: middle;
 }
 
+#tester_grid_table td {
+    line-height: 1.2;
+}
+
+#tester_grid_table td > * {
+    vertical-align: middle;
+}
+
+#admin_grid_table {
+    width: max-content;
+    min-width: 100%;
+}
+
+#admin_grid_table th,
+#admin_grid_table td {
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+#admin_grid_table td {
+    line-height: 1.2;
+}
+
+#admin_grid_table td > * {
+    vertical-align: middle;
+}
+
 #tester_grid_table td:last-child {
     white-space: nowrap;
 }
@@ -176,8 +257,115 @@ button:disabled {
     white-space: nowrap;
 }
 
+#admin_grid_table input[data-field] {
+    min-width: 40px;
+    width: 40px;
+    max-width: 80px;
+    min-height: 30px;
+    height: 30px;
+    padding: 4px 8px;
+    border: 1px solid var(--color_border);
+    border-radius: 4px;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+#admin_grid_table .admin_timestamp_input {
+    min-width: 140px;
+    width: 180px;
+    max-width: 240px;
+}
+
+.test_action_cell {
+    display: grid;
+    gap: 6px;
+    align-items: center;
+    justify-items: center;
+    text-align: center;
+    min-height: 58px;
+    width: 100%;
+}
+
+.test_action_td {
+    vertical-align: middle;
+}
+
+.test_action_td .test_action_cell {
+    min-height: 72px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.table_action_bar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.section_header_row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.section_header_row h3 {
+    margin: 0;
+}
+
+.detail_guide {
+    font-size: 14px;
+    font-weight: 500;
+    color: #5F6B73;
+    line-height: 1.5;
+}
+
+.low_test_delta_cell,
+.high_test_delta_cell {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.delta_value {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 58px;
+    width: 100%;
+}
+
+.delta_value.is_placeholder {
+    color: rgba(12, 58, 70, 0.55);
+}
+
 .hidden_id_column {
     display: none;
+}
+
+.non_modal_notice {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    display: none;
+    gap: 4px;
+}
+
+.non_modal_notice.error {
+    display: grid;
+    border-color: #D0A3A3;
+    background: #FAEAEA;
+    color: #7A1E1E;
+}
+
+.non_modal_notice.success {
+    display: grid;
+    border-color: #A8CBB5;
+    background: #EAF7EF;
+    color: #205D35;
 }
 
 .tester_table_wrap {

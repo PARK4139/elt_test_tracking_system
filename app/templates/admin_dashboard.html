@@ -1,43 +1,274 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="card">
-    <h2>관리자 대시보드</h2>
-    <p>역할: <strong>{{ current_role_name }}</strong></p>
-    <p>마스터 관리자 전체 편집 권한: <strong>{{ "예" if can_edit_all_data else "아니오" }}</strong></p>
-    <p><a href="/admin/export/xlsx">엑셀 내보내기</a> (admin, master_admin)</p>
+    <h3>OO부서 OOO프로 님, 안녕하세요.</h3>
+</section>
+<section class="card">
+    <p>기능 가이드</p>
+    <p>OPTION 1. 데이터 트래킹<br>
+    OPTION 2. Admin 아이디 생성<br>
+    </p>
 </section>
 
 <section class="card">
-    <h3>최근 행</h3>
-    <table class="basic_table">
-        <thead>
-            <tr>
-                <th class="hidden_id_column">ID</th>
-                <th>키 1</th>
-                <th>키 2</th>
-                <th>키 3</th>
-                <th>항목 01</th>
-                <th>항목 02</th>
-                <th>수정 시각</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for row in recent_test_results %}
-            <tr>
-                <td class="hidden_id_column">{{ row.id }}</td>
-                <td>{{ row.key_1 }}</td>
-                <td>{{ row.key_2 }}</td>
-                <td>{{ row.key_3 }}</td>
-                <td>{{ row.field_01 or "" }}</td>
-                <td>{{ row.field_02 or "" }}</td>
-                <td>{{ row.updated_at }}</td>
-            </tr>
-            {% else %}
-            <tr>
-                <td colspan="7">행이 없습니다.</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="section_header_row">
+        <h3>데이터 트래킹</h3>
+        <a href="/admin/export/xlsx" class="project_standard_button">엑셀 내보내기</a>
+    </div>
+    {% if qc_mode_enabled %}
+    <div class="section_header_row">
+        <p class="detail_guide">직접 데이터 수정가능 수정즉시 저장됨</p>
+        <span class="detail_guide">자동저장 모드</span>
+    </div>
+    {% endif %}
+    <div class="tester_table_wrap">
+        <table id="admin_grid_table" class="basic_table">
+            <thead>
+                <tr>
+                    <th>양식제출ID</th>
+                    <th class="hidden_id_column">ID</th>
+                    <th>성함(데이터작성자)</th>
+                    <th>key_seg 1</th>
+                    <th>key_seg 2</th>
+                    <th>key_seg 3</th>
+                    <th>temp_col 01</th>
+                    <th>temp_col 02</th>
+                    <th>temp_col 03</th>
+                    <th>temp_col 04</th>
+                    <th>temp_col 05</th>
+                    <th>temp_col 06</th>
+                    <th>temp_col 07</th>
+                    <th>temp_col 08</th>
+                    <th>temp_col 09</th>
+                    <th>temp_col 10</th>
+                    <th>저온시험 시작</th>
+                    <th>저온시험 종료</th>
+                    <th>저온시험 소요시간</th>
+                    <th>고온시험 시작</th>
+                    <th>고온시험 종료</th>
+                    <th>고온시험 소요시간</th>
+                    <th>데이터생성시각</th>
+                    <th>데이터수정시각</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in recent_test_results %}
+                {% if qc_mode_enabled %}
+                <tr class="admin_editable_row" data-id="{{ row.id }}">
+                    <td>{{ row.submission_id or "" }}</td>
+                    <td class="hidden_id_column">{{ row.id }}</td>
+                    <td><input data-field="data_writer_name" value="{{ row.data_writer_name or '' }}"></td>
+                    <td><input data-field="key_1" value="{{ row.key_1 or '' }}"></td>
+                    <td><input data-field="key_2" value="{{ row.key_2 or '' }}"></td>
+                    <td><input data-field="key_3" value="{{ row.key_3 or '' }}"></td>
+                    <td><input data-field="field_01" value="{{ row.field_01 or '' }}"></td>
+                    <td><input data-field="field_02" value="{{ row.field_02 or '' }}"></td>
+                    <td><input data-field="field_03" value="{{ row.field_03 or '' }}"></td>
+                    <td><input data-field="field_04" value="{{ row.field_04 or '' }}"></td>
+                    <td><input data-field="field_05" value="{{ row.field_05 or '' }}"></td>
+                    <td><input data-field="field_06" value="{{ row.field_06 or '' }}"></td>
+                    <td><input data-field="field_07" value="{{ row.field_07 or '' }}"></td>
+                    <td><input data-field="field_08" value="{{ row.field_08 or '' }}"></td>
+                    <td><input data-field="field_09" value="{{ row.field_09 or '' }}"></td>
+                    <td><input data-field="field_10" value="{{ row.field_10 or '' }}"></td>
+                    <td><input class="admin_timestamp_input" data-field="low_test_started_at" value="{{ row.low_test_started_at or '' }}"></td>
+                    <td><input class="admin_timestamp_input" data-field="low_test_ended_at" value="{{ row.low_test_ended_at or '' }}"></td>
+                    <td><input data-field="low_test_delta" value="{{ row.low_test_delta or '' }}"></td>
+                    <td><input class="admin_timestamp_input" data-field="high_test_started_at" value="{{ row.high_test_started_at or '' }}"></td>
+                    <td><input class="admin_timestamp_input" data-field="high_test_ended_at" value="{{ row.high_test_ended_at or '' }}"></td>
+                    <td><input data-field="high_test_delta" value="{{ row.high_test_delta or '' }}"></td>
+                    <td>{{ row.created_at }}</td>
+                    <td>{{ row.updated_at }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td>{{ row.submission_id or "" }}</td>
+                    <td class="hidden_id_column">{{ row.id }}</td>
+                    <td>{{ row.data_writer_name or "" }}</td>
+                    <td>{{ row.key_1 }}</td>
+                    <td>{{ row.key_2 }}</td>
+                    <td>{{ row.key_3 }}</td>
+                    <td>{{ row.field_01 or "" }}</td>
+                    <td>{{ row.field_02 or "" }}</td>
+                    <td>{{ row.field_03 or "" }}</td>
+                    <td>{{ row.field_04 or "" }}</td>
+                    <td>{{ row.field_05 or "" }}</td>
+                    <td>{{ row.field_06 or "" }}</td>
+                    <td>{{ row.field_07 or "" }}</td>
+                    <td>{{ row.field_08 or "" }}</td>
+                    <td>{{ row.field_09 or "" }}</td>
+                    <td>{{ row.field_10 or "" }}</td>
+                    <td>{{ row.low_test_started_at or "" }}</td>
+                    <td>{{ row.low_test_ended_at or "" }}</td>
+                    <td>{{ row.low_test_delta or "" }}</td>
+                    <td>{{ row.high_test_started_at or "" }}</td>
+                    <td>{{ row.high_test_ended_at or "" }}</td>
+                    <td>{{ row.high_test_delta or "" }}</td>
+                    <td>{{ row.created_at }}</td>
+                    <td>{{ row.updated_at }}</td>
+                </tr>
+                {% endif %}
+                {% else %}
+                <tr>
+                    <td colspan="24">행이 없습니다.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if qc_mode_enabled %}
+    <div id="admin_save_notice" class="non_modal_notice" aria-live="polite"></div>
+    {% endif %}
 </section>
+{% if not qc_mode_enabled %}
+<section class="card">
+    <h3>Admin 아이디 생성</h3>
+    <p class="detail_guide">최하단에서 부서, 성함, 전화번호, Password를 입력해 Admin 계정을 생성합니다.</p>
+    {% if admin_create_success_message %}
+    <div class="non_modal_notice success"><div>{{ admin_create_success_message }}</div></div>
+    {% endif %}
+    {% if admin_create_error_message %}
+    <div class="non_modal_notice error"><div>{{ admin_create_error_message }}</div></div>
+    {% endif %}
+    <form method="post" action="/admin/create_admin" class="form_stack">
+        <label for="department_name">부서</label>
+        <input id="department_name" name="department_name" type="text" required>
+
+        <label for="display_name">성함</label>
+        <input id="display_name" name="display_name" type="text" required>
+
+        <label for="phone_number">전화번호</label>
+        <input id="phone_number" name="phone_number" type="text" required>
+
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" required>
+
+        <button type="submit">Admin 생성</button>
+    </form>
+</section>
+<section class="card">
+    <h3>Tester join 요청 수락</h3>
+    <div class="tester_table_wrap">
+        <table class="basic_table">
+            <thead>
+                <tr>
+                    <th>업체명</th>
+                    <th>성함</th>
+                    <th>전화번호</th>
+                    <th>요청 시각</th>
+                    <th>처리</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in pending_tester_join_requests %}
+                <tr>
+                    <td>{{ user.company_name or "" }}</td>
+                    <td>{{ user.display_name or "" }}</td>
+                    <td>{{ user.phone_number or "" }}</td>
+                    <td>{{ user.created_at }}</td>
+                    <td>
+                        <form method="post" action="/admin/approve_tester_join">
+                            <input type="hidden" name="user_account_id" value="{{ user.id }}">
+                            <button type="submit">수락</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5">대기 중인 요청이 없습니다.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
+{% if qc_mode_enabled %}
+<script>
+(() => {
+    const save_notice = document.getElementById("admin_save_notice");
+    if (!save_notice) {
+        return;
+    }
+
+    const row_save_timers = new Map();
+
+    const read_error_detail = async (response) => {
+        try {
+            const payload = await response.json();
+            if (payload && payload.detail) {
+                return payload.detail;
+            }
+        } catch (_error) {
+        }
+        return "요청에 실패했습니다.";
+    };
+
+    const render_notice = (message, type_name) => {
+        save_notice.className = `non_modal_notice ${type_name}`;
+        save_notice.innerHTML = `<div>${message}</div>`;
+    };
+
+    const nullable_field_names = new Set([
+        "data_writer_name",
+        "field_01", "field_02", "field_03", "field_04", "field_05",
+        "field_06", "field_07", "field_08", "field_09", "field_10",
+        "low_test_started_at", "low_test_ended_at", "low_test_delta",
+        "high_test_started_at", "high_test_ended_at", "high_test_delta",
+    ]);
+
+    const build_row_payload = (row) => {
+        const payload = {};
+        row.querySelectorAll("input[data-field]").forEach((input) => {
+            const field_name = input.dataset.field;
+            const value = input.value.trim();
+            payload[field_name] = nullable_field_names.has(field_name) && !value ? null : value;
+        });
+        return payload;
+    };
+
+    const save_row = async (row) => {
+        const payload = build_row_payload(row);
+        if (!payload.key_1 || !payload.key_2 || !payload.key_3) {
+            render_notice("key_seg 1, key_seg 2, key_seg 3는 필수입니다.", "error");
+            return;
+        }
+
+        try {
+            const response = await fetch("/tester/rows/upsert", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+            if (!response.ok) {
+                render_notice(await read_error_detail(response), "error");
+                return;
+            }
+            render_notice("수정 내용이 자동 저장되었습니다.", "success");
+        } catch (_error) {
+            render_notice("자동 저장 중 네트워크 오류가 발생했습니다.", "error");
+        }
+    };
+
+    const schedule_row_save = (row) => {
+        const existing_timer = row_save_timers.get(row);
+        if (existing_timer) {
+            clearTimeout(existing_timer);
+        }
+        const timer_id = setTimeout(() => {
+            save_row(row);
+            row_save_timers.delete(row);
+        }, 400);
+        row_save_timers.set(row, timer_id);
+    };
+
+    document.querySelectorAll("tr.admin_editable_row").forEach((row) => {
+        row.querySelectorAll("input[data-field]").forEach((input) => {
+            input.addEventListener("input", () => schedule_row_save(row));
+            input.addEventListener("change", () => schedule_row_save(row));
+        });
+    });
+})();
+</script>
+{% endif %}
 {% endblock %}

@@ -1,7 +1,11 @@
-from fastapi import APIRouter, Form, Request
+from fastapi import APIRouter, Form, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
+from sqlalchemy import select
+import os
 
-from app.auth import ensure_active_user_limit
+from app.auth import ROLE_ADMIN, ROLE_TESTER, ensure_active_user_limit
+from app.deps import database_session_dependency
+from app.models import UserAccount
 
 
 auth_router = APIRouter(tags=["auth"])
@@ -18,18 +22,129 @@ def render_login_page(request: Request):
     return templates.TemplateResponse(
         request=request,
         name="login.html",
-        context={"request": request, "page_title": "Login"},
+        context={"request": request, "page_title": "Login", "error_message": ""},
     )
 
 
 @auth_router.post("/login")
 def handle_login_submission(
     request: Request,
-    user_name: str = Form(...),
+    database_session: database_session_dependency,
+    phone_number: str = Form(...),
     password: str = Form(...),
 ):
-    _ = password
-    ensure_active_user_limit(user_name=user_name)
-    if user_name.lower().startswith("admin"):
-        return RedirectResponse(url="/admin/dashboard", status_code=303)
-    return RedirectResponse(url="/tester/dashboard", status_code=303)
+    normalized_phone_number = phone_number.strip()
+    normalized_password = password.strip()
+    user_account = database_session.scalar(
+        select(UserAccount).where(UserAccount.phone_number == normalized_phone_number)
+    )
+    if user_account is None:
+        user_account = database_session.scalar(
+            select(UserAccount).where(UserAccount.user_name == normalized_phone_number)
+        )
+
+    if user_account is None or (user_account.password_hash or "").strip() != normalized_password:
+        templates = request.app.state.templates
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context={
+                "request": request,
+                "page_title": "Login",
+                "error_message": "전화번호 또는 비밀번호가 올바르지 않습니다.",
+            },
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if user_account.role_name == ROLE_TESTER and not bool(user_account.is_approved):
+        templates = request.app.state.templates
+        return templates.TemplateResponse(
+            request=request,
+            name="login.html",
+            context={
+                "request": request,
+                "page_title": "Login",
+                "error_message": "Tester 가입 승인이 아직 완료되지 않았습니다. 관리자 승인 후 로그인해 주세요.",
+            },
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    ensure_active_user_limit(user_name=normalized_phone_number)
+    qc_mode_enabled = os.getenv("QC_MODE", "True").strip().lower() in {"1", "true", "yes", "on"}
+    if qc_mode_enabled:
+        redirect_url = "/tester"
+    else:
+        redirect_url = "/admin" if user_account.role_name == ROLE_ADMIN else "/tester"
+    response = RedirectResponse(url=redirect_url, status_code=303)
+    response.set_cookie("role_name", user_account.role_name, httponly=False)
+    response.set_cookie("phone_number", normalized_phone_number, httponly=False)
+    return response
+
+
+@auth_router.get("/join")
+def render_join_page(request: Request):
+    templates = request.app.state.templates
+    return templates.TemplateResponse(
+        request=request,
+        name="join.html",
+        context={"request": request, "page_title": "Join", "error_message": "", "success_message": ""},
+    )
+
+
+@auth_router.post("/join")
+def handle_join_submission(
+    request: Request,
+    database_session: database_session_dependency,
+    company_name: str = Form(...),
+    display_name: str = Form(...),
+    phone_number: str = Form(...),
+    password: str = Form(...),
+):
+    normalized_company_name = company_name.strip()
+    normalized_display_name = display_name.strip()
+    normalized_phone_number = phone_number.strip()
+    normalized_password = password.strip()
+    if not normalized_company_name or not normalized_display_name or not normalized_phone_number or not normalized_password:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="모든 항목을 입력해 주세요.")
+
+    existing_user_account = database_session.scalar(
+        select(UserAccount).where(UserAccount.phone_number == normalized_phone_number)
+    )
+    if existing_user_account is not None:
+        templates = request.app.state.templates
+        return templates.TemplateResponse(
+            request=request,
+            name="join.html",
+            context={
+                "request": request,
+                "page_title": "Join",
+                "error_message": "이미 등록된 전화번호입니다.",
+                "success_message": "",
+            },
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+    new_user_account = UserAccount(
+        user_name=normalized_phone_number,
+        password_hash=normalized_password,
+        role_name=ROLE_TESTER,
+        display_name=normalized_display_name,
+        phone_number=normalized_phone_number,
+        company_name=normalized_company_name,
+        department_name=None,
+        is_approved=False,
+    )
+    database_session.add(new_user_account)
+    database_session.commit()
+
+    templates = request.app.state.templates
+    return templates.TemplateResponse(
+        request=request,
+        name="join.html",
+        context={
+            "request": request,
+            "page_title": "Join",
+            "error_message": "",
+            "success_message": "회원가입이 완료되었습니다. 로그인해 주세요.",
+        },
+    )

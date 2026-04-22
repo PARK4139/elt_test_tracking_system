@@ -3,24 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ page_title or "ELT 시험 데이터 트래킹 시스템" }}</title>
+    <title>Demo | ELT Room Test Data Management</title>
+    <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg">
     <link rel="stylesheet" href="/static/css/app.css">
 </head>
 <body>
     <header class="site_header">
         <div class="site_header_inner">
             <h1>
+                <img src="/static/images/huvitz_logo.svg" alt="Huvitz" class="header_logo">
                 {% if request.url.path.startswith('/admin') %}
-                ELT 시험 데이터 트래킹 시스템
+                ELT Room 시험소요 데이터 트래킹 시스템
                 {% elif request.url.path.startswith('/tester') %}
-                ELT 시험 데이터 입력 시스템
+                ELT Room 시험소요 데이터 입력 시스템
                 {% else %}
-                ELT 시험 데이터 시스템
+                ELT Room 시험소요 데이터 관리 시스템
                 {% endif %}
             </h1>
             <a
                 class="qc_mode_button"
-                href="{% if request.url.path.startswith('/admin') %}/tester/dashboard{% else %}/admin/dashboard{% endif %}"
+                href="{% if not qc_mode_enabled %}/login{% elif request.url.path.startswith('/admin') %}/tester{% else %}/admin{% endif %}"
             >
                 QC MODE
             </a>

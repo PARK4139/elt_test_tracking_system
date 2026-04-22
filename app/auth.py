@@ -1,7 +1,7 @@
 from threading import Lock
 from typing import Annotated
 
-from fastapi import Header, HTTPException, status
+from fastapi import Header, HTTPException, Request, status
 
 
 ROLE_TESTER = "tester"
@@ -12,7 +12,13 @@ active_user_names: set[str] = set()
 active_user_names_lock = Lock()
 
 
-def get_current_role_name(x_user_role: Annotated[str | None, Header()] = None) -> str:
+def get_current_role_name(
+    request: Request,
+    x_user_role: Annotated[str | None, Header()] = None,
+) -> str:
+    cookie_role_name = request.cookies.get("role_name")
+    if cookie_role_name:
+        return cookie_role_name
     if x_user_role is None:
         return ROLE_TESTER
     return x_user_role

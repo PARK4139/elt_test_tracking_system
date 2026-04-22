@@ -1,8 +1,10 @@
 from fastapi import APIRouter, HTTPException, Request, status
+from sqlalchemy import select
 
 from app.deps import current_role_name_dependency
 from app.deps import database_session_dependency
 from app.schemas import TestResultPartialInput
+from app.models import UserAccount
 from app.services.test_result_service import (
     list_recent_test_results,
     mark_high_test_end,
@@ -15,13 +17,29 @@ from app.services.test_result_service import (
 tester_router = APIRouter(prefix="/tester", tags=["tester"])
 
 
-@tester_router.get("/dashboard")
+def _get_current_display_name(request: Request, database_session) -> str:
+    phone_number = (request.cookies.get("phone_number") or "").strip()
+    if not phone_number:
+        return ""
+    user_account = database_session.scalar(
+        select(UserAccount).where(UserAccount.phone_number == phone_number)
+    )
+    if user_account is None:
+        return ""
+    return (user_account.display_name or "").strip()
+
+
+@tester_router.get("")
 def render_tester_dashboard(
     request: Request,
     database_session: database_session_dependency,
     current_role_name: current_role_name_dependency,
 ):
     recent_test_results = list_recent_test_results(database_session=database_session, limit=20)
+    current_display_name = _get_current_display_name(
+        request=request,
+        database_session=database_session,
+    )
     templates = request.app.state.templates
     return templates.TemplateResponse(
         request=request,
@@ -31,15 +49,24 @@ def render_tester_dashboard(
             "page_title": "Tester Dashboard",
             "recent_test_results": recent_test_results,
             "current_role_name": current_role_name,
+            "current_display_name": current_display_name,
         },
     )
 
 
 @tester_router.post("/rows/upsert")
 def upsert_tester_row(
+    request: Request,
     test_result_partial_input: TestResultPartialInput,
     database_session: database_session_dependency,
 ):
+    current_display_name = _get_current_display_name(
+        request=request,
+        database_session=database_session,
+    )
+    if current_display_name:
+        test_result_partial_input.data_writer_name = current_display_name
+
     try:
         test_result = upsert_partial_test_result(
             database_session=database_session,
@@ -54,9 +81,13 @@ def upsert_tester_row(
     return {
         "message": "Row upserted.",
         "id": test_result.id,
+        "submission_id": test_result.submission_id,
+        "data_writer_name": test_result.data_writer_name,
         "key_1": test_result.key_1,
         "key_2": test_result.key_2,
         "key_3": test_result.key_3,
+        "created_at": test_result.created_at,
+        "updated_at": test_result.updated_at,
     }
 
 

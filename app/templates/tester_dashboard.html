@@ -1,51 +1,54 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="card">
-    <h2>사용 가이드</h2>
-    <p><strong>OOO 님, 안녕하세요.</strong></p>
-    <p>STEP 1. 행 추가<br>
-    STEP 2. 키 1, 키 2, 키 3 입력(필수)<br>
-    STEP 3. 항목 값 입력<br>
-    STEP 4. 저장<br>
-    STEP 5. 저온시험 시작<br>
-    STEP 6. 저온시험 종료<br>
-    STEP 7. 고온시험 시작<br>
-    STEP 8. 고온시험 종료</p>
+    <h3>OO업체 OOO 님, 안녕하세요.</h3>
+</section>
+<section class="card">
+    <p>사용 가이드</p>
+    <p>STEP 1. 양식 작성<br>
+    STEP 2. 양식 제출<br>
 </section>
 
 <section class="card">
-     <h3>작성 중인 데이터</h3>
-    <button id="add_row_button" type="button">행 추가</button>
+    <div class="section_header_row">
+        <h3>양식작성</h3>
+        <div class="table_action_bar">
+            <button id="sample_fill_button" type="button" class="qc_mode_action_button">SAMPLE 작성</button>
+            <button id="add_row_button" type="button">행 추가</button>
+            <button id="delete_selected_rows_button" type="button">선택 행 삭제</button>
+        </div>
+    </div>
     <div class="tester_table_wrap">
         <table id="tester_grid_table" class="basic_table">
             <thead>
                 <tr>
+                    <th>선택</th>
                     <th class="hidden_id_column">ID</th>
-                    <th>키 1</th>
-                    <th>키 2</th>
-                    <th>키 3</th>
-                    <th>항목 01</th>
-                    <th>항목 02</th>
-                    <th>항목 03</th>
-                    <th>항목 04</th>
-                    <th>항목 05</th>
-                    <th>항목 06</th>
-                    <th>항목 07</th>
-                    <th>항목 08</th>
-                    <th>항목 09</th>
-                    <th>항목 10</th>
-                    <th>저온시험 시작 시각</th>
-                    <th>저온시험 종료 시각</th>
+                    <th>key_seg 1</th>
+                    <th>key_seg 2</th>
+                    <th>key_seg 3</th>
+                    <th>temp_col 01</th>
+                    <th>temp_col 02</th>
+                    <th>temp_col 03</th>
+                    <th>temp_col 04</th>
+                    <th>temp_col 05</th>
+                    <th>temp_col 06</th>
+                    <th>temp_col 07</th>
+                    <th>temp_col 08</th>
+                    <th>temp_col 09</th>
+                    <th>temp_col 10</th>
+                    <th>저온시험 시작</th>
+                    <th>저온시험 종료</th>
                     <th>저온시험 소요시간</th>
-                    <th>고온시험 시작 시각</th>
-                    <th>고온시험 종료 시각</th>
+                    <th>고온시험 시작</th>
+                    <th>고온시험 종료</th>
                     <th>고온시험 소요시간</th>
-                    <th>동작</th>
                 </tr>
             </thead>
             <tbody id="tester_grid_body">
                 {% for row in recent_test_results %}
                 <tr class="editable_row" data-id="{{ row.id }}">
+                    <td><input class="row_select_checkbox" type="checkbox"></td>
                     <td class="id_cell hidden_id_column">{{ row.id }}</td>
                     <td><input data-field="key_1" value="{{ row.key_1 or '' }}"></td>
                     <td><input data-field="key_2" value="{{ row.key_2 or '' }}"></td>
@@ -60,27 +63,42 @@
                     <td><input data-field="field_08" value="{{ row.field_08 or '' }}"></td>
                     <td><input data-field="field_09" value="{{ row.field_09 or '' }}"></td>
                     <td><input data-field="field_10" value="{{ row.field_10 or '' }}"></td>
-                    <td class="low_test_started_at_cell">{{ row.low_test_started_at or "" }}</td>
-                    <td class="low_test_ended_at_cell">{{ row.low_test_ended_at or "" }}</td>
-                    <td class="low_test_delta_cell">{{ row.low_test_delta or "" }}</td>
-                    <td class="high_test_started_at_cell">{{ row.high_test_started_at or "" }}</td>
-                    <td class="high_test_ended_at_cell">{{ row.high_test_ended_at or "" }}</td>
-                    <td class="high_test_delta_cell">{{ row.high_test_delta or "" }}</td>
-                    <td>
-                        <button type="button" class="upsert_button">저장</button>
-                        <button type="button" class="low_test_start_button">저온시험 시작</button>
-                        <button type="button" class="low_test_end_button">저온시험 종료</button>
-                        <button type="button" class="high_test_start_button">고온시험 시작</button>
-                        <button type="button" class="high_test_end_button">고온시험 종료</button>
+                    <td class="test_action_td">
+                        <div class="test_action_cell">
+                            <input class="low_test_started_at_cell test_timestamp_input" value="{{ row.low_test_started_at or '' }}">
+                            <button type="button" class="low_test_start_button"{% if row.low_test_started_at %} style="display:none;"{% endif %}>저온시험 시작</button>
+                        </div>
                     </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="21">행이 없습니다.</td>
+                    <td class="test_action_td">
+                        <div class="test_action_cell">
+                            <input class="low_test_ended_at_cell test_timestamp_input" value="{{ row.low_test_ended_at or '' }}">
+                            <button type="button" class="low_test_end_button"{% if row.low_test_ended_at %} style="display:none;"{% endif %}>저온시험 종료</button>
+                        </div>
+                    </td>
+                    <td class="low_test_delta_cell"><span class="delta_value{% if not row.low_test_delta %} is_placeholder{% endif %}">{{ row.low_test_delta or "자동계산" }}</span></td>
+                    <td class="test_action_td">
+                        <div class="test_action_cell">
+                            <input class="high_test_started_at_cell test_timestamp_input" value="{{ row.high_test_started_at or '' }}">
+                            <button type="button" class="high_test_start_button"{% if row.high_test_started_at %} style="display:none;"{% endif %}>고온시험 시작</button>
+                        </div>
+                    </td>
+                    <td class="test_action_td">
+                        <div class="test_action_cell">
+                            <input class="high_test_ended_at_cell test_timestamp_input" value="{{ row.high_test_ended_at or '' }}">
+                            <button type="button" class="high_test_end_button"{% if row.high_test_ended_at %} style="display:none;"{% endif %}>고온시험 종료</button>
+                        </div>
+                    </td>
+                    <td class="high_test_delta_cell"><span class="delta_value{% if not row.high_test_delta %} is_placeholder{% endif %}">{{ row.high_test_delta or "자동계산" }}</span></td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+</section>
+
+<section class="card">
+     <h3>양식제출</h3>
+    <button id="save_all_rows_button" type="button">모든 행 저장</button>
+    <div id="save_validation_notice" class="non_modal_notice" aria-live="polite"></div>
 </section>
 {% endblock %}

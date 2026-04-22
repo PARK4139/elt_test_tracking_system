@@ -7,7 +7,7 @@ from app.services.test_result_service import list_recent_test_results
 def _datetime_to_isoformat(value):
     if value is None:
         return None
-    return value.isoformat()
+    return value.strftime("%Y-%m-%d %H:%M:%S")
 
 
 def build_test_result_workbook(database_session: Session) -> Workbook:
@@ -16,35 +16,38 @@ def build_test_result_workbook(database_session: Session) -> Workbook:
     worksheet.title = "test_results"
 
     header_names = [
-        "id",
-        "key_1",
-        "key_2",
-        "key_3",
-        "field_01",
-        "field_02",
-        "field_03",
-        "field_04",
-        "field_05",
-        "field_06",
-        "field_07",
-        "field_08",
-        "field_09",
-        "field_10",
-        "low_test_started_at",
-        "low_test_ended_at",
-        "low_test_delta",
-        "high_test_started_at",
-        "high_test_ended_at",
-        "high_test_delta",
-        "created_at",
-        "updated_at",
+        "양식제출ID",
+        "데이터생성시각",
+        "성함(데이터작성자)",
+        "key_seg 1",
+        "key_seg 2",
+        "key_seg 3",
+        "temp_col 01",
+        "temp_col 02",
+        "temp_col 03",
+        "temp_col 04",
+        "temp_col 05",
+        "temp_col 06",
+        "temp_col 07",
+        "temp_col 08",
+        "temp_col 09",
+        "temp_col 10",
+        "저온시험 시작",
+        "저온시험 종료",
+        "저온시험 소요시간",
+        "고온시험 시작",
+        "고온시험 종료",
+        "고온시험 소요시간",
+        "데이터수정시각",
     ]
     worksheet.append(header_names)
 
     for test_result in list_recent_test_results(database_session=database_session, limit=1000):
         worksheet.append(
             [
-                test_result.id,
+                test_result.submission_id,
+                _datetime_to_isoformat(test_result.created_at),
+                test_result.data_writer_name,
                 test_result.key_1,
                 test_result.key_2,
                 test_result.key_3,
@@ -64,7 +67,6 @@ def build_test_result_workbook(database_session: Session) -> Workbook:
                 _datetime_to_isoformat(test_result.high_test_started_at),
                 _datetime_to_isoformat(test_result.high_test_ended_at),
                 test_result.high_test_delta,
-                _datetime_to_isoformat(test_result.created_at),
                 _datetime_to_isoformat(test_result.updated_at),
             ]
         )

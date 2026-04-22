@@ -17,6 +17,11 @@ class UserAccount(Base):
     user_name: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
     password_hash: Mapped[str] = mapped_column(Text, nullable=False)
     role_name: Mapped[str] = mapped_column(Text, nullable=False)
+    display_name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    phone_number: Mapped[str | None] = mapped_column(Text, unique=True, nullable=True)
+    company_name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    department_name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_approved: Mapped[bool] = mapped_column(nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=get_utc_now_datetime,
@@ -41,6 +46,8 @@ class TestResult(Base):
     key_1: Mapped[str] = mapped_column(Text, nullable=False)
     key_2: Mapped[str] = mapped_column(Text, nullable=False)
     key_3: Mapped[str] = mapped_column(Text, nullable=False)
+    submission_id: Mapped[str | None] = mapped_column(Text, nullable=True)
+    data_writer_name: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     field_01: Mapped[str | None] = mapped_column(Text, nullable=True)
     field_02: Mapped[str | None] = mapped_column(Text, nullable=True)

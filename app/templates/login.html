@@ -2,15 +2,19 @@
 {% block content %}
 <section class="card">
     <h2>로그인</h2>
-    <p>테스터/관리자/마스터관리자 흐름을 위한 로그인 페이지입니다.</p>
+    <p>전화번호와 비밀번호로 로그인해 주세요.</p>
+    {% if error_message %}
+    <div class="non_modal_notice error"><div>{{ error_message }}</div></div>
+    {% endif %}
     <form method="post" action="/login" class="form_stack">
-        <label for="user_name">사용자 이름</label>
-        <input id="user_name" name="user_name" type="text" required>
+        <label for="phone_number">전화번호</label>
+        <input id="phone_number" name="phone_number" type="text" required>
 
         <label for="password">비밀번호</label>
         <input id="password" name="password" type="password" required>
 
         <button type="submit">로그인</button>
     </form>
+    <p><a href="/join" class="project_standard_button">Tester 회원가입</a></p>
 </section>
 {% endblock %}

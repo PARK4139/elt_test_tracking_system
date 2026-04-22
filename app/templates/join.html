@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+    <h2>Tester 회원가입</h2>
+    <p>업체명, 성함, 전화번호, 비밀번호를 입력해 주세요.</p>
+    {% if success_message %}
+    <div class="non_modal_notice success"><div>{{ success_message }}</div></div>
+    {% endif %}
+    {% if error_message %}
+    <div class="non_modal_notice error"><div>{{ error_message }}</div></div>
+    {% endif %}
+    <form method="post" action="/join" class="form_stack">
+        <label for="company_name">업체명</label>
+        <input id="company_name" name="company_name" type="text" required>
+
+        <label for="display_name">성함</label>
+        <input id="display_name" name="display_name" type="text" required>
+
+        <label for="phone_number">전화번호</label>
+        <input id="phone_number" name="phone_number" type="text" required>
+
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" required>
+
+        <button type="submit">가입하기</button>
+    </form>
+    <p><a href="/login" class="project_standard_button">로그인으로 이동</a></p>
+</section>
+{% endblock %}
