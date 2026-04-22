@@ -1,13 +1,20 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="card">
-    <h2>TESTER 대시보드</h2>
-    <p>역할: <strong>{{ current_role_name }}</strong></p>
+    <h2>사용 가이드</h2>
+    <p><strong>OOO 님, 안녕하세요.</strong></p>
+    <p>STEP 1. 행 추가<br>
+    STEP 2. 키 1, 키 2, 키 3 입력(필수)<br>
+    STEP 3. 항목 값 입력<br>
+    STEP 4. 저장<br>
+    STEP 5. 저온시험 시작<br>
+    STEP 6. 저온시험 종료<br>
+    STEP 7. 고온시험 시작<br>
+    STEP 8. 고온시험 종료</p>
 </section>
 
 <section class="card">
-    <h3>최근 행</h3>
-    <p>시험 데이터 입력/수정 후 저장하고, 저온시험/고온시험 버튼을 순서대로 진행하세요.</p>
+     <h3>작성 중인 데이터</h3>
     <button id="add_row_button" type="button">행 추가</button>
     <div class="tester_table_wrap">
         <table id="tester_grid_table" class="basic_table">

@@ -51,7 +51,7 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 32px;
+    min-height: 29px;
     padding: 6px 12px;
     border: 1px solid #0C3A46;
     border-radius: 6px;
@@ -60,6 +60,31 @@ body {
     text-decoration: none;
     font-weight: 700;
     font-size: 12px;
+}
+
+button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 29px;
+    padding: 6px 12px;
+    border: 1px solid #0C3A46;
+    border-radius: 6px;
+    color: #0C3A46;
+    background: #FFFFFF;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+button:not(.qc_mode_button) {
+    font-size: 15.6px;
+}
+
+button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
 }
 
 .site_nav {
@@ -104,10 +129,7 @@ body {
 }
 
 .form_stack button {
-    background: var(--color_primary);
-    color: #0B2530;
-    cursor: pointer;
-    font-weight: 700;
+    width: fit-content;
 }
 
 .basic_table {
@@ -151,10 +173,6 @@ body {
 }
 
 #tester_grid_table td:last-child button {
-    min-height: 30px;
-    height: 30px;
-    padding: 4px 8px;
-    font-size: 12px;
     white-space: nowrap;
 }
 
@@ -166,4 +184,24 @@ body {
     width: 100%;
     max-width: 100%;
     overflow-x: auto;
+}
+
+/* Global scrollbar thickness up */
+*::-webkit-scrollbar {
+    width: 24px;
+    height: 24px;
+}
+
+*::-webkit-scrollbar-thumb {
+    background-color: #A9BBC3;
+    border: 6px solid #FFFFFF;
+    border-radius: 12px;
+}
+
+*::-webkit-scrollbar-track {
+    background-color: #E7EEF2;
+}
+
+html {
+    scrollbar-width: auto;
 }
