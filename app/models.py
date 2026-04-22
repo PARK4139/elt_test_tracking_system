@@ -1,0 +1,73 @@
+from datetime import datetime, timezone
+
+from sqlalchemy import DateTime, Integer, Text, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column
+
+from elt_test_tracking_system.app.db import Base
+
+
+def get_utc_now_datetime() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+class UserAccount(Base):
+    __tablename__ = "user_account"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_name: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
+    password_hash: Mapped[str] = mapped_column(Text, nullable=False)
+    role_name: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=get_utc_now_datetime,
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=get_utc_now_datetime,
+        onupdate=get_utc_now_datetime,
+        nullable=False,
+    )
+
+
+class TestResult(Base):
+    __tablename__ = "test_result"
+    __table_args__ = (
+        UniqueConstraint("key_1", "key_2", "key_3", name="uq_test_result_key_triplet"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+
+    key_1: Mapped[str] = mapped_column(Text, nullable=False)
+    key_2: Mapped[str] = mapped_column(Text, nullable=False)
+    key_3: Mapped[str] = mapped_column(Text, nullable=False)
+
+    field_01: Mapped[str | None] = mapped_column(Text, nullable=True)
+    field_02: Mapped[str | None] = mapped_column(Text, nullable=True)
+    field_03: Mapped[str | None] = mapped_column(Text, nullable=True)
+    field_04: Mapped[str | None] = mapped_column(Text, nullable=True)
+    field_05: Mapped[str | None] = mapped_column(Text, nullable=True)
+    field_06: Mapped[str | None] = mapped_column(Text, nullable=True)
+    field_07: Mapped[str | None] = mapped_column(Text, nullable=True)
+    field_08: Mapped[str | None] = mapped_column(Text, nullable=True)
+    field_09: Mapped[str | None] = mapped_column(Text, nullable=True)
+    field_10: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    low_test_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    low_test_ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    low_test_delta: Mapped[str | None] = mapped_column(Text, nullable=True)
+    high_test_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    high_test_ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    high_test_delta: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=get_utc_now_datetime,
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=get_utc_now_datetime,
+        onupdate=get_utc_now_datetime,
+        nullable=False,
+    )

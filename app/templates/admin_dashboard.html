@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+    <h2>Admin Dashboard</h2>
+    <p>Role: <strong>{{ current_role_name }}</strong></p>
+    <p>Master admin edit all data: <strong>{{ "yes" if can_edit_all_data else "no" }}</strong></p>
+    <p><a href="/admin/export/xlsx">Export Excel</a> (admin and master_admin)</p>
+</section>
+
+<section class="card">
+    <h3>Recent Rows</h3>
+    <table class="basic_table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>key_1</th>
+                <th>key_2</th>
+                <th>key_3</th>
+                <th>field_01</th>
+                <th>field_02</th>
+                <th>updated_at</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in recent_test_results %}
+            <tr>
+                <td>{{ row.id }}</td>
+                <td>{{ row.key_1 }}</td>
+                <td>{{ row.key_2 }}</td>
+                <td>{{ row.key_3 }}</td>
+                <td>{{ row.field_01 or "" }}</td>
+                <td>{{ row.field_02 or "" }}</td>
+                <td>{{ row.updated_at }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7">No rows yet.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}
+

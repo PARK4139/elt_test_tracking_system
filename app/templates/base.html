@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title or "elt_test_tracking_system" }}</title>
+    <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+    <header class="site_header">
+        <div class="site_header_inner">
+            <h1>elt_test_tracking_system</h1>
+            <nav class="site_nav">
+                <a href="/login">Login</a>
+                <a href="/tester/dashboard">Tester</a>
+                <a href="/admin/dashboard">Admin</a>
+            </nav>
+        </div>
+    </header>
+    <main class="page_container">
+        {% block content %}{% endblock %}
+    </main>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
+

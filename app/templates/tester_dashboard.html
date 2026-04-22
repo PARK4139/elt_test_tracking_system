@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card">
+    <h2>Tester Dashboard</h2>
+    <p>Multi-row progressive input placeholder. Partial row updates are supported by API.</p>
+    <p>Future inline editable grid hooks are intentionally reserved in this template.</p>
+</section>
+
+<section class="card">
+    <h3>Recent Rows</h3>
+    <table class="basic_table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>key_1</th>
+                <th>key_2</th>
+                <th>key_3</th>
+                <th>low_test_delta</th>
+                <th>high_test_delta</th>
+                <th>updated_at</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for row in recent_test_results %}
+            <tr>
+                <td>{{ row.id }}</td>
+                <td>{{ row.key_1 }}</td>
+                <td>{{ row.key_2 }}</td>
+                <td>{{ row.key_3 }}</td>
+                <td>{{ row.low_test_delta or "" }}</td>
+                <td>{{ row.high_test_delta or "" }}</td>
+                <td>{{ row.updated_at }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="7">No rows yet.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}
+
