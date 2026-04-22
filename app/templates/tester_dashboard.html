@@ -4,10 +4,22 @@
     <h3>OO업체 OOO 님, 안녕하세요.</h3>
 </section>
 <section class="card">
-    <p>사용 가이드</p>
-    <p>STEP 1. 양식 작성<br>
-    STEP 2. 양식 제출<br>
+    <div class="section_header_row">
+        <div></div>
+        <button id="open_tester_guide_modal_button" type="button">입력 방법</button>
+    </div>
 </section>
+
+<div id="tester_guide_modal" class="guide_modal_overlay" aria-hidden="true">
+    <div class="guide_modal_card" role="dialog" aria-modal="true" aria-labelledby="tester_guide_modal_title">
+        <div class="section_header_row">
+            <h3 id="tester_guide_modal_title">입력 방법</h3>
+            <button id="close_tester_guide_modal_button" type="button">닫기</button>
+        </div>
+        <p class="detail_guide">STEP 1. 양식 작성</p>
+        <p class="detail_guide">STEP 2. 양식 제출</p>
+    </div>
+</div>
 
 <section class="card">
     <div class="section_header_row">
@@ -15,16 +27,18 @@
         <div class="table_action_bar">
             <button id="sample_fill_button" type="button" class="qc_mode_action_button">SAMPLE 작성</button>
             <button id="add_row_button" type="button">행 추가</button>
+            <button id="select_all_rows_button" type="button">모든 행 선택</button>
             <button id="delete_selected_rows_button" type="button">선택 행 삭제</button>
         </div>
     </div>
+    <script id="tester_dropdown_options_json" type="application/json">{{ dropdown_options_map|tojson }}</script>
     <div class="tester_table_wrap">
         <table id="tester_grid_table" class="basic_table">
             <thead>
                 <tr>
                     <th>선택</th>
                     <th class="hidden_id_column">ID</th>
-                    <th>key_seg 1</th>
+                    <th>업체명</th>
                     <th>key_seg 2</th>
                     <th>key_seg 3</th>
                     <th>temp_col 01</th>
@@ -50,12 +64,72 @@
                 <tr class="editable_row" data-id="{{ row.id }}">
                     <td><input class="row_select_checkbox" type="checkbox"></td>
                     <td class="id_cell hidden_id_column">{{ row.id }}</td>
-                    <td><input data-field="key_1" value="{{ row.key_1 or '' }}"></td>
-                    <td><input data-field="key_2" value="{{ row.key_2 or '' }}"></td>
-                    <td><input data-field="key_3" value="{{ row.key_3 or '' }}"></td>
-                    <td><input data-field="field_01" value="{{ row.field_01 or '' }}"></td>
-                    <td><input data-field="field_02" value="{{ row.field_02 or '' }}"></td>
-                    <td><input data-field="field_03" value="{{ row.field_03 or '' }}"></td>
+                    <td>
+                        <select data-field="key_1">
+                            <option value=""></option>
+                            {% if row.key_1 and row.key_1 not in dropdown_options_map.get("key_1", []) %}
+                            <option value="{{ row.key_1 }}" selected>{{ row.key_1 }}</option>
+                            {% endif %}
+                            {% for option_value in dropdown_options_map.get("key_1", []) %}
+                            <option value="{{ option_value }}" {% if (row.key_1 or "") == option_value %}selected{% endif %}>{{ option_value }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td>
+                        <select data-field="key_2">
+                            <option value=""></option>
+                            {% if row.key_2 and row.key_2 not in dropdown_options_map.get("key_2", []) %}
+                            <option value="{{ row.key_2 }}" selected>{{ row.key_2 }}</option>
+                            {% endif %}
+                            {% for option_value in dropdown_options_map.get("key_2", []) %}
+                            <option value="{{ option_value }}" {% if (row.key_2 or "") == option_value %}selected{% endif %}>{{ option_value }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td>
+                        <select data-field="key_3">
+                            <option value=""></option>
+                            {% if row.key_3 and row.key_3 not in dropdown_options_map.get("key_3", []) %}
+                            <option value="{{ row.key_3 }}" selected>{{ row.key_3 }}</option>
+                            {% endif %}
+                            {% for option_value in dropdown_options_map.get("key_3", []) %}
+                            <option value="{{ option_value }}" {% if (row.key_3 or "") == option_value %}selected{% endif %}>{{ option_value }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td>
+                        <select data-field="field_01">
+                            <option value=""></option>
+                            {% if row.field_01 and row.field_01 not in dropdown_options_map.get("field_01", []) %}
+                            <option value="{{ row.field_01 }}" selected>{{ row.field_01 }}</option>
+                            {% endif %}
+                            {% for option_value in dropdown_options_map.get("field_01", []) %}
+                            <option value="{{ option_value }}" {% if (row.field_01 or "") == option_value %}selected{% endif %}>{{ option_value }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td>
+                        <select data-field="field_02">
+                            <option value=""></option>
+                            {% if row.field_02 and row.field_02 not in dropdown_options_map.get("field_02", []) %}
+                            <option value="{{ row.field_02 }}" selected>{{ row.field_02 }}</option>
+                            {% endif %}
+                            {% for option_value in dropdown_options_map.get("field_02", []) %}
+                            <option value="{{ option_value }}" {% if (row.field_02 or "") == option_value %}selected{% endif %}>{{ option_value }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td>
+                        <select data-field="field_03">
+                            <option value=""></option>
+                            {% if row.field_03 and row.field_03 not in dropdown_options_map.get("field_03", []) %}
+                            <option value="{{ row.field_03 }}" selected>{{ row.field_03 }}</option>
+                            {% endif %}
+                            {% for option_value in dropdown_options_map.get("field_03", []) %}
+                            <option value="{{ option_value }}" {% if (row.field_03 or "") == option_value %}selected{% endif %}>{{ option_value }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
                     <td><input data-field="field_04" value="{{ row.field_04 or '' }}"></td>
                     <td><input data-field="field_05" value="{{ row.field_05 or '' }}"></td>
                     <td><input data-field="field_06" value="{{ row.field_06 or '' }}"></td>
@@ -101,4 +175,36 @@
     <button id="save_all_rows_button" type="button">모든 행 저장</button>
     <div id="save_validation_notice" class="non_modal_notice" aria-live="polite"></div>
 </section>
+<script>
+(() => {
+    const modal_overlay = document.getElementById("tester_guide_modal");
+    const open_button = document.getElementById("open_tester_guide_modal_button");
+    const close_button = document.getElementById("close_tester_guide_modal_button");
+    if (!modal_overlay || !open_button || !close_button) {
+        return;
+    }
+
+    const open_modal = () => {
+        modal_overlay.classList.add("is_open");
+        modal_overlay.setAttribute("aria-hidden", "false");
+    };
+    const close_modal = () => {
+        modal_overlay.classList.remove("is_open");
+        modal_overlay.setAttribute("aria-hidden", "true");
+    };
+
+    open_button.addEventListener("click", open_modal);
+    close_button.addEventListener("click", close_modal);
+    modal_overlay.addEventListener("click", (event) => {
+        if (event.target === modal_overlay) {
+            close_modal();
+        }
+    });
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+            close_modal();
+        }
+    });
+})();
+</script>
 {% endblock %}

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import select
+from sqlalchemy import delete, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -11,6 +11,7 @@ from app.schemas import TestResultPartialInput
 PARTIAL_UPDATE_FIELD_NAMES = [
     "submission_id",
     "data_writer_name",
+    "is_reviewed",
     "field_01",
     "field_02",
     "field_03",
@@ -40,6 +41,18 @@ def upsert_partial_test_result(
     database_session: Session,
     test_result_partial_input: TestResultPartialInput,
 ) -> TestResult:
+    return _upsert_partial_test_result_internal(
+        database_session=database_session,
+        test_result_partial_input=test_result_partial_input,
+        commit=True,
+    )
+
+
+def _upsert_partial_test_result_internal(
+    database_session: Session,
+    test_result_partial_input: TestResultPartialInput,
+    commit: bool,
+) -> TestResult:
     key_1 = _strip_if_string(test_result_partial_input.key_1)
     key_2 = _strip_if_string(test_result_partial_input.key_2)
     key_3 = _strip_if_string(test_result_partial_input.key_3)
@@ -67,18 +80,28 @@ def upsert_partial_test_result(
         if new_value is not None:
             setattr(existing_test_result, field_name, new_value)
 
-    try:
-        database_session.commit()
-    except IntegrityError as exception:
-        database_session.rollback()
-        raise ValueError("A row with the same key_1, key_2, key_3 already exists.") from exception
-    database_session.refresh(existing_test_result)
+    if commit:
+        try:
+            database_session.commit()
+        except IntegrityError as exception:
+            database_session.rollback()
+            raise ValueError("A row with the same key_1, key_2, key_3 already exists.") from exception
+        database_session.refresh(existing_test_result)
     return existing_test_result
 
 
 def list_recent_test_results(database_session: Session, limit: int = 20) -> list[TestResult]:
     result_rows = database_session.scalars(
         select(TestResult).order_by(TestResult.updated_at.desc()).limit(limit)
+    )
+    return list(result_rows)
+
+
+def list_unreviewed_test_results(database_session: Session) -> list[TestResult]:
+    result_rows = database_session.scalars(
+        select(TestResult)
+        .where(or_(TestResult.is_reviewed == False, TestResult.is_reviewed.is_(None)))  # noqa: E712
+        .order_by(TestResult.updated_at.desc())
     )
     return list(result_rows)
 
@@ -142,3 +165,59 @@ def mark_high_test_end(database_session: Session, test_result_id: int) -> TestRe
         test_result.high_test_ended_at,
     )
     return _commit_and_refresh(database_session, test_result)
+
+
+def delete_test_results_by_ids(database_session: Session, row_ids: list[int]) -> int:
+    normalized_row_ids = sorted({int(row_id) for row_id in row_ids if int(row_id) > 0})
+    if not normalized_row_ids:
+        return 0
+    result = database_session.execute(
+        delete(TestResult).where(TestResult.id.in_(normalized_row_ids))
+    )
+    database_session.commit()
+    return int(result.rowcount or 0)
+
+
+def save_all_test_results_atomically(
+    database_session: Session,
+    rows: list[TestResultPartialInput],
+    delete_row_ids: list[int],
+) -> None:
+    normalized_delete_row_ids = sorted(
+        {
+            int(row_id)
+            for row_id in delete_row_ids
+            if str(row_id).strip() and int(row_id) > 0
+        }
+    )
+    try:
+        for row in rows:
+            _upsert_partial_test_result_internal(
+                database_session=database_session,
+                test_result_partial_input=row,
+                commit=False,
+            )
+        if normalized_delete_row_ids:
+            database_session.execute(
+                delete(TestResult).where(TestResult.id.in_(normalized_delete_row_ids))
+            )
+        database_session.commit()
+    except IntegrityError as exception:
+        database_session.rollback()
+        raise ValueError("A row with the same key_1, key_2, key_3 already exists.") from exception
+    except Exception:
+        database_session.rollback()
+        raise
+
+
+def mark_test_results_review_complete_by_ids(database_session: Session, row_ids: list[int]) -> int:
+    normalized_row_ids = sorted({int(row_id) for row_id in row_ids if int(row_id) > 0})
+    if not normalized_row_ids:
+        return 0
+    result = database_session.execute(
+        update(TestResult)
+        .where(TestResult.id.in_(normalized_row_ids))
+        .values(is_reviewed=True)
+    )
+    database_session.commit()
+    return int(result.rowcount or 0)

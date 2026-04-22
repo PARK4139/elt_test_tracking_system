@@ -2,19 +2,31 @@
     const tester_grid_body = document.getElementById("tester_grid_body");
     const sample_fill_button = document.getElementById("sample_fill_button");
     const add_row_button = document.getElementById("add_row_button");
+    const select_all_rows_button = document.getElementById("select_all_rows_button");
     const delete_selected_rows_button = document.getElementById("delete_selected_rows_button");
     const save_all_rows_button = document.getElementById("save_all_rows_button");
     const save_validation_notice = document.getElementById("save_validation_notice");
+    const tester_dropdown_options_json = document.getElementById("tester_dropdown_options_json");
+    const pending_deleted_row_ids = new Set();
 
     if (
         !tester_grid_body ||
         !sample_fill_button ||
         !add_row_button ||
+        !select_all_rows_button ||
         !delete_selected_rows_button ||
         !save_all_rows_button ||
-        !save_validation_notice
+        !save_validation_notice ||
+        !tester_dropdown_options_json
     ) {
         return;
+    }
+
+    let dropdown_options_map = {};
+    try {
+        dropdown_options_map = JSON.parse(tester_dropdown_options_json.textContent || "{}");
+    } catch (_error) {
+        dropdown_options_map = {};
     }
 
     const field_names = [
@@ -31,7 +43,7 @@
     ];
     const required_field_names = ["key_1", "key_2", "key_3", ...field_names];
     const field_label_map = {
-        key_1: "key_seg 1",
+        key_1: "업체명",
         key_2: "key_seg 2",
         key_3: "key_seg 3",
         field_01: "temp_col 01",
@@ -162,18 +174,28 @@
     };
 
     const create_row_element = () => {
+        const build_select_html = (field_name) => {
+            const option_values = Array.isArray(dropdown_options_map[field_name])
+                ? dropdown_options_map[field_name]
+                : [];
+            const option_html = option_values
+                .map((option_value) => `<option value="${option_value}">${option_value}</option>`)
+                .join("");
+            return `<select data-field="${field_name}"><option value=""></option>${option_html}</select>`;
+        };
+
         const row_element = document.createElement("tr");
         row_element.className = "editable_row";
         row_element.dataset.id = "";
         row_element.innerHTML = `
             <td><input class="row_select_checkbox" type="checkbox"></td>
             <td class="id_cell hidden_id_column"></td>
-            <td><input data-field="key_1" value=""></td>
-            <td><input data-field="key_2" value=""></td>
-            <td><input data-field="key_3" value=""></td>
-            <td><input data-field="field_01" value=""></td>
-            <td><input data-field="field_02" value=""></td>
-            <td><input data-field="field_03" value=""></td>
+            <td>${build_select_html("key_1")}</td>
+            <td>${build_select_html("key_2")}</td>
+            <td>${build_select_html("key_3")}</td>
+            <td>${build_select_html("field_01")}</td>
+            <td>${build_select_html("field_02")}</td>
+            <td>${build_select_html("field_03")}</td>
             <td><input data-field="field_04" value=""></td>
             <td><input data-field="field_05" value=""></td>
             <td><input data-field="field_06" value=""></td>
@@ -478,13 +500,22 @@
 
         for (const row_element of editable_rows) {
             for (const field_name of required_field_names) {
-                const input_element = row_element.querySelector(`[data-field="${field_name}"]`);
-                if (!input_element) {
+                const field_element = row_element.querySelector(`[data-field="${field_name}"]`);
+                if (!field_element) {
                     continue;
                 }
-                if (!input_element.value.trim()) {
-                    input_element.value = "sample_value";
-                    apply_compact_width_to_input(input_element);
+                if (!field_element.value.trim()) {
+                    if (field_element.tagName === "SELECT") {
+                        const first_option = Array.from(field_element.options).find(
+                            (option) => (option.value || "").trim() !== ""
+                        );
+                        if (first_option) {
+                            field_element.value = first_option.value;
+                        }
+                        continue;
+                    }
+                    field_element.value = "sample_value";
+                    apply_compact_width_to_input(field_element);
                 }
             }
         }
@@ -572,10 +603,10 @@
         const row_element = create_row_element();
         if (editable_rows.length > 0) {
             const last_row = editable_rows[editable_rows.length - 1];
-            const source_inputs = last_row.querySelectorAll("input[data-field]");
-            for (const source_input of source_inputs) {
-                const field_name = source_input.dataset.field;
-                row_element.querySelector(`[data-field="${field_name}"]`).value = source_input.value;
+            const source_fields = last_row.querySelectorAll("[data-field]");
+            for (const source_field of source_fields) {
+                const field_name = source_field.dataset.field;
+                row_element.querySelector(`[data-field="${field_name}"]`).value = source_field.value;
             }
         }
         tester_grid_body.appendChild(row_element);
@@ -591,7 +622,22 @@
             return;
         }
         for (const row_element of selected_rows) {
+            const existing_id = Number((row_element.dataset.id || "").trim());
+            if (Number.isInteger(existing_id) && existing_id > 0) {
+                pending_deleted_row_ids.add(existing_id);
+            }
             row_element.remove();
+        }
+    });
+
+    select_all_rows_button.addEventListener("click", () => {
+        clear_non_modal_notice();
+        const editable_rows = list_editable_rows();
+        for (const row_element of editable_rows) {
+            const checkbox = row_element.querySelector(".row_select_checkbox");
+            if (checkbox) {
+                checkbox.checked = true;
+            }
         }
     });
 
@@ -625,17 +671,46 @@
             return;
         }
 
+        const rows_payload = [];
         for (let index = 0; index < editable_rows.length; index += 1) {
-            const success = await upsert_row(
-                editable_rows[index],
-                index + 1,
-                submission_id_for_save
-            );
-            if (!success) {
-                return;
+            const row_payload = build_upsert_payload(editable_rows[index]);
+            row_payload.submission_id = submission_id_for_save;
+            const has_any_value =
+                !!row_payload.key_1 ||
+                !!row_payload.key_2 ||
+                !!row_payload.key_3 ||
+                field_names.some((field_name) => String(row_payload[field_name] || "").trim() !== "") ||
+                !!row_payload.low_test_started_at ||
+                !!row_payload.low_test_ended_at ||
+                !!row_payload.high_test_started_at ||
+                !!row_payload.high_test_ended_at ||
+                !!row_payload.low_test_delta ||
+                !!row_payload.high_test_delta;
+            if (has_any_value) {
+                rows_payload.push(row_payload);
             }
         }
+
+        try {
+            const response = await fetch("/tester/rows/save_all", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    rows: rows_payload,
+                    delete_row_ids: Array.from(pending_deleted_row_ids),
+                }),
+            });
+            if (!response.ok) {
+                alert(await read_error_detail(response));
+                return;
+            }
+            pending_deleted_row_ids.clear();
+        } catch (_error) {
+            alert("모든 행 저장 중 네트워크 오류가 발생했습니다.");
+            return;
+        }
         render_non_modal_notice(["모든 행 저장이 완료되었습니다."], "success");
+        window.location.reload();
     });
 
     const existing_rows = tester_grid_body.querySelectorAll("tr.editable_row");

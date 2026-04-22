@@ -48,6 +48,7 @@ class TestResult(Base):
     key_3: Mapped[str] = mapped_column(Text, nullable=False)
     submission_id: Mapped[str | None] = mapped_column(Text, nullable=True)
     data_writer_name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_reviewed: Mapped[bool] = mapped_column(nullable=False, default=False)
 
     field_01: Mapped[str | None] = mapped_column(Text, nullable=True)
     field_02: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -76,5 +77,21 @@ class TestResult(Base):
         DateTime(timezone=True),
         default=get_utc_now_datetime,
         onupdate=get_utc_now_datetime,
+        nullable=False,
+    )
+
+
+class DropdownOption(Base):
+    __tablename__ = "dropdown_option"
+    __table_args__ = (
+        UniqueConstraint("field_name", "option_value", name="uq_dropdown_option_field_value"),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    field_name: Mapped[str] = mapped_column(Text, nullable=False)
+    option_value: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=get_utc_now_datetime,
         nullable=False,
     )

@@ -14,6 +14,7 @@ class TestResultPartialInput(BaseModel):
     key_3: str
     submission_id: str | None = None
     data_writer_name: str | None = None
+    is_reviewed: bool | None = None
 
     field_01: str | None = None
     field_02: str | None = None
@@ -40,6 +41,7 @@ class TestResultRead(BaseModel):
     id: int
     submission_id: str | None
     data_writer_name: str | None
+    is_reviewed: bool
     key_1: str
     key_2: str
     key_3: str
@@ -61,3 +63,16 @@ class TestResultRead(BaseModel):
     high_test_delta: str | None
     created_at: datetime
     updated_at: datetime
+
+
+class TestResultDeleteInput(BaseModel):
+    row_ids: list[int]
+
+
+class TestResultSaveAllInput(BaseModel):
+    rows: list[TestResultPartialInput]
+    delete_row_ids: list[int] = []
+
+
+class TestResultReviewCompleteInput(BaseModel):
+    row_ids: list[int]

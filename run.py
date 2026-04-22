@@ -151,7 +151,7 @@ def main() -> None:
     qc_mode_enabled = load_qc_mode_from_parent_env()
     os.environ["QC_MODE"] = "True" if qc_mode_enabled else "False"
     if qc_mode_enabled:
-        launch_debuggable_chrome("http://127.0.0.1:8000/admin")
+        launch_debuggable_chrome("http://127.0.0.1:8000/tester")
         run_qc_mode_with_watchdog()
         return
     uvicorn.run(app, host="127.0.0.1", port=8000)

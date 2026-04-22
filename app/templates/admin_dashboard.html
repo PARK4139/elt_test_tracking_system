@@ -4,16 +4,30 @@
     <h3>OO부서 OOO프로 님, 안녕하세요.</h3>
 </section>
 <section class="card">
-    <p>기능 가이드</p>
-    <p>OPTION 1. 데이터 트래킹<br>
-    OPTION 2. Admin 아이디 생성<br>
-    </p>
+    <div class="section_header_row">
+        <div></div>
+        <button id="open_admin_guide_modal_button" type="button">기능 목록</button>
+    </div>
 </section>
+<div id="admin_guide_modal" class="guide_modal_overlay" aria-hidden="true">
+    <div class="guide_modal_card" role="dialog" aria-modal="true" aria-labelledby="admin_guide_modal_title">
+        <div class="section_header_row">
+            <h3 id="admin_guide_modal_title">기능 목록</h3>
+            <button id="close_admin_guide_modal_button" type="button">닫기</button>
+        </div>
+        <p class="detail_guide">OPTION 1. 데이터 트래킹</p>
+        <p class="detail_guide">OPTION 2. Admin 아이디 생성</p>
+        <p class="detail_guide">OPTION 3. 드롭다운 항목 추가</p>
+    </div>
+</div>
 
 <section class="card">
     <div class="section_header_row">
         <h3>데이터 트래킹</h3>
-        <a href="/admin/export/xlsx" class="project_standard_button">엑셀 내보내기</a>
+        <div class="table_action_bar">
+            <a href="/admin/export/xlsx" class="project_standard_button">엑셀 내보내기</a>
+            <button id="admin_delete_selected_rows_button" type="button">선택 행 삭제</button>
+        </div>
     </div>
     {% if qc_mode_enabled %}
     <div class="section_header_row">
@@ -25,10 +39,11 @@
         <table id="admin_grid_table" class="basic_table">
             <thead>
                 <tr>
+                    <th>선택</th>
                     <th>양식제출ID</th>
                     <th class="hidden_id_column">ID</th>
                     <th>성함(데이터작성자)</th>
-                    <th>key_seg 1</th>
+                    <th>업체명</th>
                     <th>key_seg 2</th>
                     <th>key_seg 3</th>
                     <th>temp_col 01</th>
@@ -49,12 +64,15 @@
                     <th>고온시험 소요시간</th>
                     <th>데이터생성시각</th>
                     <th>데이터수정시각</th>
+                    <th>입력승인</th>
+                    <th>입력승인여부</th>
                 </tr>
             </thead>
             <tbody>
                 {% for row in recent_test_results %}
                 {% if qc_mode_enabled %}
                 <tr class="admin_editable_row" data-id="{{ row.id }}">
+                    <td><input class="admin_row_select_checkbox" type="checkbox"></td>
                     <td>{{ row.submission_id or "" }}</td>
                     <td class="hidden_id_column">{{ row.id }}</td>
                     <td><input data-field="data_writer_name" value="{{ row.data_writer_name or '' }}"></td>
@@ -79,9 +97,19 @@
                     <td><input data-field="high_test_delta" value="{{ row.high_test_delta or '' }}"></td>
                     <td>{{ row.created_at }}</td>
                     <td>{{ row.updated_at }}</td>
+                    <td>
+                        <button
+                            type="button"
+                            class="mark_review_complete_button"
+                            data-row-id="{{ row.id }}"
+                            {% if row.is_reviewed %}disabled{% endif %}
+                        >선택한 행 검토완료</button>
+                    </td>
+                    <td class="review_status_cell">{{ "검토완료" if row.is_reviewed else "미검토" }}</td>
                 </tr>
                 {% else %}
-                <tr>
+                <tr class="admin_readonly_row" data-id="{{ row.id }}">
+                    <td><input class="admin_row_select_checkbox" type="checkbox"></td>
                     <td>{{ row.submission_id or "" }}</td>
                     <td class="hidden_id_column">{{ row.id }}</td>
                     <td>{{ row.data_writer_name or "" }}</td>
@@ -106,12 +134,18 @@
                     <td>{{ row.high_test_delta or "" }}</td>
                     <td>{{ row.created_at }}</td>
                     <td>{{ row.updated_at }}</td>
+                    <td>
+                        <button
+                            type="button"
+                            class="mark_review_complete_button"
+                            data-row-id="{{ row.id }}"
+                            {% if row.is_reviewed %}disabled{% endif %}
+                        >선택한 행 검토완료</button>
+                    </td>
+                    <td class="review_status_cell">{{ "검토완료" if row.is_reviewed else "미검토" }}</td>
                 </tr>
                 {% endif %}
                 {% else %}
-                <tr>
-                    <td colspan="24">행이 없습니다.</td>
-                </tr>
                 {% endfor %}
             </tbody>
         </table>
@@ -120,6 +154,129 @@
     <div id="admin_save_notice" class="non_modal_notice" aria-live="polite"></div>
     {% endif %}
 </section>
+<script>
+(() => {
+    const modal_overlay = document.getElementById("admin_guide_modal");
+    const open_button = document.getElementById("open_admin_guide_modal_button");
+    const close_button = document.getElementById("close_admin_guide_modal_button");
+    if (!modal_overlay || !open_button || !close_button) {
+        return;
+    }
+    const open_modal = () => {
+        modal_overlay.classList.add("is_open");
+        modal_overlay.setAttribute("aria-hidden", "false");
+    };
+    const close_modal = () => {
+        modal_overlay.classList.remove("is_open");
+        modal_overlay.setAttribute("aria-hidden", "true");
+    };
+    open_button.addEventListener("click", open_modal);
+    close_button.addEventListener("click", close_modal);
+    modal_overlay.addEventListener("click", (event) => {
+        if (event.target === modal_overlay) {
+            close_modal();
+        }
+    });
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+            close_modal();
+        }
+    });
+})();
+</script>
+<script>
+(() => {
+    const delete_button = document.getElementById("admin_delete_selected_rows_button");
+    if (!delete_button) {
+        return;
+    }
+
+    const read_error_detail = async (response) => {
+        try {
+            const payload = await response.json();
+            if (payload && payload.detail) {
+                return payload.detail;
+            }
+        } catch (_error) {
+        }
+        return "요청에 실패했습니다.";
+    };
+
+    delete_button.addEventListener("click", async () => {
+        const checked_checkboxes = Array.from(
+            document.querySelectorAll(".admin_row_select_checkbox:checked")
+        );
+        if (checked_checkboxes.length === 0) {
+            alert("선택한 행이 없습니다.");
+            return;
+        }
+
+        const delete_row_ids = checked_checkboxes
+            .map((checkbox) => checkbox.closest("tr"))
+            .filter((row) => row && row.dataset.id)
+            .map((row) => Number(row.dataset.id))
+            .filter((row_id) => Number.isInteger(row_id) && row_id > 0);
+
+        if (delete_row_ids.length === 0) {
+            alert("삭제 가능한 행 ID가 없습니다.");
+            return;
+        }
+
+        try {
+            const response = await fetch("/tester/rows/delete", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ row_ids: delete_row_ids }),
+            });
+            if (!response.ok) {
+                alert(await read_error_detail(response));
+                return;
+            }
+            window.location.reload();
+        } catch (_error) {
+            alert("삭제 중 네트워크 오류가 발생했습니다.");
+        }
+    });
+})();
+</script>
+<script>
+(() => {
+    const read_error_detail = async (response) => {
+        try {
+            const payload = await response.json();
+            if (payload && payload.detail) {
+                return payload.detail;
+            }
+        } catch (_error) {
+        }
+        return "요청에 실패했습니다.";
+    };
+
+    document.querySelectorAll(".mark_review_complete_button").forEach((button) => {
+        button.addEventListener("click", async () => {
+            const row_id = Number(button.dataset.rowId || "");
+            if (!Number.isInteger(row_id) || row_id <= 0) {
+                alert("유효한 행 ID가 없습니다.");
+                return;
+            }
+            try {
+                const response = await fetch("/admin/rows/review_complete", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ row_ids: [row_id] }),
+                });
+                if (!response.ok) {
+                    alert(await read_error_detail(response));
+                    return;
+                }
+                window.location.reload();
+            } catch (_error) {
+                alert("검토완료 처리 중 네트워크 오류가 발생했습니다.");
+            }
+        });
+    });
+})();
+</script>
 {% if not qc_mode_enabled %}
 <section class="card">
     <h3>Admin 아이디 생성</h3>
@@ -227,10 +384,21 @@
         return payload;
     };
 
+    const serialize_payload = (payload) => JSON.stringify(payload);
+
+    const is_row_dirty = (row) => {
+        const current_payload = build_row_payload(row);
+        const current_serialized = serialize_payload(current_payload);
+        return current_serialized !== (row.dataset.initialPayload || "");
+    };
+
     const save_row = async (row) => {
         const payload = build_row_payload(row);
+        if (!is_row_dirty(row)) {
+            return;
+        }
         if (!payload.key_1 || !payload.key_2 || !payload.key_3) {
-            render_notice("key_seg 1, key_seg 2, key_seg 3는 필수입니다.", "error");
+            render_notice("업체명, key_seg 2, key_seg 3는 필수입니다.", "error");
             return;
         }
 
@@ -244,6 +412,7 @@
                 render_notice(await read_error_detail(response), "error");
                 return;
             }
+            row.dataset.initialPayload = serialize_payload(payload);
             render_notice("수정 내용이 자동 저장되었습니다.", "success");
         } catch (_error) {
             render_notice("자동 저장 중 네트워크 오류가 발생했습니다.", "error");
@@ -251,6 +420,9 @@
     };
 
     const schedule_row_save = (row) => {
+        if (!is_row_dirty(row)) {
+            return;
+        }
         const existing_timer = row_save_timers.get(row);
         if (existing_timer) {
             clearTimeout(existing_timer);
@@ -263,6 +435,7 @@
     };
 
     document.querySelectorAll("tr.admin_editable_row").forEach((row) => {
+        row.dataset.initialPayload = serialize_payload(build_row_payload(row));
         row.querySelectorAll("input[data-field]").forEach((input) => {
             input.addEventListener("input", () => schedule_row_save(row));
             input.addEventListener("change", () => schedule_row_save(row));
@@ -271,4 +444,24 @@
 })();
 </script>
 {% endif %}
+<section class="card">
+    <h3>드롭다운 항목 추가</h3>
+    <p class="detail_guide">Tester의 업체명 / key_seg / temp_col 01~03 드롭다운 항목을 추가합니다.</p>
+    <form method="post" action="/admin/dropdown_options/add" class="form_stack dropdown_inline_form">
+        <label for="dropdown_field_name">필드</label>
+        <select id="dropdown_field_name" name="field_name" required>
+            <option value="key_1">업체명</option>
+            <option value="key_2">key_seg 2</option>
+            <option value="key_3">key_seg 3</option>
+            <option value="field_01">temp_col 01</option>
+            <option value="field_02">temp_col 02</option>
+            <option value="field_03">temp_col 03</option>
+        </select>
+
+        <label for="dropdown_option_value">항목 값</label>
+        <input id="dropdown_option_value" name="option_value" type="text" required>
+
+        <button type="submit">항목 추가</button>
+    </form>
+</section>
 {% endblock %}

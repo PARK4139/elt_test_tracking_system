@@ -72,6 +72,7 @@ def _ensure_test_result_columns() -> None:
     expected_columns = {
         "submission_id": "TEXT",
         "data_writer_name": "TEXT",
+        "is_reviewed": "INTEGER DEFAULT 0",
     }
     with engine.begin() as connection:
         existing_column_names = {

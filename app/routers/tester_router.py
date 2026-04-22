@@ -3,16 +3,19 @@ from sqlalchemy import select
 
 from app.deps import current_role_name_dependency
 from app.deps import database_session_dependency
-from app.schemas import TestResultPartialInput
+from app.schemas import TestResultDeleteInput, TestResultPartialInput, TestResultSaveAllInput
 from app.models import UserAccount
 from app.services.test_result_service import (
-    list_recent_test_results,
+    list_unreviewed_test_results,
     mark_high_test_end,
     mark_high_test_start,
     mark_low_test_end,
     mark_low_test_start,
+    delete_test_results_by_ids,
+    save_all_test_results_atomically,
     upsert_partial_test_result,
 )
+from app.services.dropdown_option_service import list_dropdown_options_map
 
 tester_router = APIRouter(prefix="/tester", tags=["tester"])
 
@@ -35,7 +38,8 @@ def render_tester_dashboard(
     database_session: database_session_dependency,
     current_role_name: current_role_name_dependency,
 ):
-    recent_test_results = list_recent_test_results(database_session=database_session, limit=20)
+    recent_test_results = list_unreviewed_test_results(database_session=database_session)
+    dropdown_options_map = list_dropdown_options_map(database_session=database_session)
     current_display_name = _get_current_display_name(
         request=request,
         database_session=database_session,
@@ -50,6 +54,7 @@ def render_tester_dashboard(
             "recent_test_results": recent_test_results,
             "current_role_name": current_role_name,
             "current_display_name": current_display_name,
+            "dropdown_options_map": dropdown_options_map,
         },
     )
 
@@ -179,3 +184,44 @@ def end_high_test(id: int, database_session: database_session_dependency):
         "high_test_ended_at": test_result.high_test_ended_at,
         "high_test_delta": test_result.high_test_delta,
     }
+
+
+@tester_router.post("/rows/delete")
+def delete_tester_rows(
+    test_result_delete_input: TestResultDeleteInput,
+    database_session: database_session_dependency,
+):
+    deleted_count = delete_test_results_by_ids(
+        database_session=database_session,
+        row_ids=test_result_delete_input.row_ids,
+    )
+    return {"message": "Rows deleted.", "deleted_count": deleted_count}
+
+
+@tester_router.post("/rows/save_all")
+def save_all_tester_rows(
+    request: Request,
+    test_result_save_all_input: TestResultSaveAllInput,
+    database_session: database_session_dependency,
+):
+    current_display_name = _get_current_display_name(
+        request=request,
+        database_session=database_session,
+    )
+    if current_display_name:
+        for row in test_result_save_all_input.rows:
+            row.data_writer_name = current_display_name
+
+    try:
+        save_all_test_results_atomically(
+            database_session=database_session,
+            rows=test_result_save_all_input.rows,
+            delete_row_ids=test_result_save_all_input.delete_row_ids,
+        )
+    except ValueError as exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exception),
+        ) from exception
+
+    return {"message": "All rows saved atomically."}

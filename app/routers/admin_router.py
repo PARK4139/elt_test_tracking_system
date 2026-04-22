@@ -1,10 +1,16 @@
 from fastapi import APIRouter, Form, Request
+from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 
 from app.auth import ROLE_ADMIN, ROLE_MASTER_ADMIN
 from app.deps import current_role_name_dependency, database_session_dependency
 from app.models import UserAccount
-from app.services.test_result_service import list_recent_test_results
+from app.schemas import TestResultReviewCompleteInput
+from app.services.test_result_service import (
+    list_recent_test_results,
+    mark_test_results_review_complete_by_ids,
+)
+from app.services.dropdown_option_service import add_dropdown_option_if_missing
 
 
 admin_router = APIRouter(prefix="/admin", tags=["admin"])
@@ -187,3 +193,32 @@ def approve_tester_join_request(
             "pending_tester_join_requests": pending_tester_join_requests,
         },
     )
+
+
+@admin_router.post("/rows/review_complete")
+def mark_admin_rows_review_complete(
+    test_result_review_complete_input: TestResultReviewCompleteInput,
+    database_session: database_session_dependency,
+):
+    updated_count = mark_test_results_review_complete_by_ids(
+        database_session=database_session,
+        row_ids=test_result_review_complete_input.row_ids,
+    )
+    return {"message": "Rows review-completed.", "updated_count": updated_count}
+
+
+@admin_router.post("/dropdown_options/add")
+def add_admin_dropdown_option(
+    database_session: database_session_dependency,
+    field_name: str = Form(...),
+    option_value: str = Form(...),
+):
+    try:
+        add_dropdown_option_if_missing(
+            database_session=database_session,
+            field_name=field_name,
+            option_value=option_value,
+        )
+    except ValueError:
+        return RedirectResponse(url="/admin", status_code=303)
+    return RedirectResponse(url="/admin", status_code=303)
