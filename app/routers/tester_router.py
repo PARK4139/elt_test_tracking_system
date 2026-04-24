@@ -20,16 +20,19 @@ from app.services.dropdown_option_service import list_dropdown_options_map
 tester_router = APIRouter(prefix="/tester", tags=["tester"])
 
 
-def _get_current_display_name(request: Request, database_session) -> str:
+def _get_current_user_info(request: Request, database_session) -> tuple[str, str]:
     phone_number = (request.cookies.get("phone_number") or "").strip()
     if not phone_number:
-        return ""
+        return "", ""
     user_account = database_session.scalar(
         select(UserAccount).where(UserAccount.phone_number == phone_number)
     )
     if user_account is None:
-        return ""
-    return (user_account.display_name or "").strip()
+        return "", ""
+    return (
+        (user_account.display_name or "").strip(),
+        (user_account.company_name or "").strip(),
+    )
 
 
 @tester_router.get("")
@@ -40,7 +43,7 @@ def render_tester_dashboard(
 ):
     recent_test_results = list_unreviewed_test_results(database_session=database_session)
     dropdown_options_map = list_dropdown_options_map(database_session=database_session)
-    current_display_name = _get_current_display_name(
+    current_display_name, current_company_name = _get_current_user_info(
         request=request,
         database_session=database_session,
     )
@@ -54,6 +57,7 @@ def render_tester_dashboard(
             "recent_test_results": recent_test_results,
             "current_role_name": current_role_name,
             "current_display_name": current_display_name,
+            "current_company_name": current_company_name,
             "dropdown_options_map": dropdown_options_map,
         },
     )
@@ -65,7 +69,7 @@ def upsert_tester_row(
     test_result_partial_input: TestResultPartialInput,
     database_session: database_session_dependency,
 ):
-    current_display_name = _get_current_display_name(
+    current_display_name, _current_company_name = _get_current_user_info(
         request=request,
         database_session=database_session,
     )
@@ -204,7 +208,7 @@ def save_all_tester_rows(
     test_result_save_all_input: TestResultSaveAllInput,
     database_session: database_session_dependency,
 ):
-    current_display_name = _get_current_display_name(
+    current_display_name, _current_company_name = _get_current_user_info(
         request=request,
         database_session=database_session,
     )

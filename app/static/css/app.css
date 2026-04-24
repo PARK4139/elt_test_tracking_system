@@ -185,6 +185,18 @@ button:disabled {
     margin: 0;
 }
 
+.dropdown_inline_form button {
+    min-height: 29px;
+    padding: 6px 12px;
+    border: 1px solid #0C3A46;
+    border-radius: 6px;
+    color: #0C3A46;
+    background: #FFFFFF;
+    font-weight: 700;
+    font-size: 15.6px;
+    line-height: 1;
+}
+
 .dropdown_inline_form select {
     min-height: 34px;
     height: 34px;
@@ -194,8 +206,10 @@ button:disabled {
 }
 
 .basic_table {
-    width: 100%;
+    width: max-content;
+    min-width: 100%;
     border-collapse: collapse;
+    table-layout: auto;
 }
 
 .basic_table th,
@@ -206,9 +220,9 @@ button:disabled {
 }
 
 #tester_grid_table input[data-field] {
-    min-width: 40px;
-    width: 40px;
-    max-width: 80px;
+    width: 90%;
+    min-width: 0;
+    max-width: none;
     min-height: 30px;
     height: 30px;
     padding: 4px 8px;
@@ -219,9 +233,9 @@ button:disabled {
 }
 
 #tester_grid_table select[data-field] {
-    min-width: 40px;
-    width: 80px;
-    max-width: 140px;
+    width: 90%;
+    min-width: 0;
+    max-width: none;
     min-height: 34px;
     height: 34px;
     padding: 5px 8px;
@@ -240,9 +254,9 @@ button:disabled {
 }
 
 #tester_grid_table .test_timestamp_input {
-    min-width: 140px;
-    width: 180px;
-    max-width: 240px;
+    width: 90%;
+    min-width: 0;
+    max-width: none;
     min-height: 30px;
     height: 30px;
     padding: 4px 8px;
@@ -281,6 +295,22 @@ button:disabled {
     vertical-align: middle;
 }
 
+#admin_grid_table th {
+    position: relative;
+}
+
+#admin_grid_table .column_resize_handle {
+    position: absolute;
+    top: 0;
+    right: -5px;
+    width: 10px;
+    height: 100%;
+    cursor: col-resize;
+    user-select: none;
+    touch-action: none;
+    z-index: 3;
+}
+
 #admin_grid_table td {
     line-height: 1.2;
 }
@@ -298,9 +328,9 @@ button:disabled {
 }
 
 #admin_grid_table input[data-field] {
-    min-width: 40px;
-    width: 40px;
-    max-width: 80px;
+    width: 90%;
+    min-width: 0;
+    max-width: none;
     min-height: 30px;
     height: 30px;
     padding: 4px 8px;
@@ -311,9 +341,9 @@ button:disabled {
 }
 
 #admin_grid_table select[data-field] {
-    min-width: 40px;
-    width: 80px;
-    max-width: 140px;
+    width: 90%;
+    min-width: 0;
+    max-width: none;
     min-height: 34px;
     height: 34px;
     padding: 5px 8px;
@@ -325,9 +355,9 @@ button:disabled {
 }
 
 #admin_grid_table .admin_timestamp_input {
-    min-width: 140px;
-    width: 180px;
-    max-width: 240px;
+    width: 90%;
+    min-width: 0;
+    max-width: none;
 }
 
 .test_action_cell {
@@ -356,6 +386,26 @@ button:disabled {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
+}
+
+.admin_feature_menu {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+}
+
+.admin_feature_menu .admin_feature_filter_button {
+    width: 90%;
+    justify-content: flex-start;
+    text-align: left;
+    padding-left: 14px;
+}
+
+#admin_guide_modal .guide_modal_card {
+    width: min(336px, 90vw) !important;
+    max-width: 336px !important;
+    min-width: 280px;
 }
 
 .section_header_row {
@@ -399,6 +449,10 @@ button:disabled {
     display: none;
 }
 
+.hidden_audit_column {
+    display: none;
+}
+
 .non_modal_notice {
     margin-top: 10px;
     padding: 10px 12px;
@@ -426,6 +480,15 @@ button:disabled {
     width: 100%;
     max-width: 100%;
     overflow-x: auto;
+    resize: horizontal;
+    min-width: 420px;
+}
+
+.basic_table button,
+.basic_table .project_standard_button {
+    min-width: 96px;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .guide_modal_overlay {

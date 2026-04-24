@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo | ELT Room Test Data Management</title>
+    <link rel="icon" type="image/svg+xml" href="/static/images/favicon.svg">
+    <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+    <header class="site_header">
+        <div class="site_header_inner">
+            <h1>
+                <img src="/static/images/huvitz_logo.svg" alt="Huvitz" class="header_logo">
+                
+                ELT Room 시험시간 소요 데이터 입력승인 시스템
+                
+            </h1>
+            <a
+                class="qc_mode_button"
+                href="/tester"
+            >
+                QC MODE
+            </a>
+        </div>
+    </header>
+    <main class="page_container">
+        
+<section class="card">
+    <h3>OO부서 OOO프로 님, 안녕하세요.</h3>
+</section>
+<section class="card">
+    <div class="section_header_row">
+        <button id="open_admin_guide_modal_button" type="button">기능 목록</button>
+        <div></div>
+    </div>
+</section>
+<div id="admin_guide_modal" class="guide_modal_overlay" aria-hidden="true">
+    <div class="guide_modal_card" role="dialog" aria-modal="true" aria-labelledby="admin_guide_modal_title">
+        <div class="section_header_row">
+            <h3 id="admin_guide_modal_title">기능 목록</h3>
+            <button id="close_admin_guide_modal_button" type="button">닫기</button>
+        </div>
+        <div class="admin_feature_menu">
+            
+            <button type="button" class="admin_feature_filter_button qc_mode_action_button" data-feature-target="all">OPTION 0. 전체 보기</button>
+            
+            <button type="button" class="admin_feature_filter_button" data-feature-target="tracking">OPTION 1. 데이터 입력승인</button>
+            <button type="button" class="admin_feature_filter_button" data-feature-target="create_admin">OPTION 2. Admin 아이디 생성</button>
+            <button type="button" class="admin_feature_filter_button" data-feature-target="create_tester">OPTION 3. Tester 아이디 생성</button>
+            <button type="button" class="admin_feature_filter_button" data-feature-target="approve_join">OPTION 4. Tester join 요청 검토</button>
+            <button type="button" class="admin_feature_filter_button" data-feature-target="dropdown_add">OPTION 5. 드롭다운 항목 추가</button>
+            <button type="button" class="admin_feature_filter_button" data-feature-target="dropdown_delete">OPTION 6. 드롭다운 항목 삭제</button>
+        </div>
+    </div>
+</div>
+
+<section class="card" data-admin-feature-session="tracking" style="display:none;">
+    <div class="section_header_row">
+        <h3>데이터 입력승인</h3>
+        <div class="table_action_bar">
+            <a href="/admin/export/xlsx" class="project_standard_button">엑셀 내보내기</a>
+            <button id="admin_mark_review_complete_button" type="button">선택한 행 검토완료</button>
+            <button id="admin_delete_selected_rows_button" type="button">선택 행 삭제</button>
+        </div>
+    </div>
+    
+    <div class="section_header_row">
+        <p class="detail_guide">※주의: 실시간 자동저장 중(실수 입력도 즉시 반영) </p>
+    </div>
+    
+    <div class="tester_table_wrap">
+        <table id="admin_grid_table" class="basic_table">
+            <thead>
+                <tr>
+                    <th>행 선택</th>
+                    <th>양식제출ID</th>
+                    <th class="hidden_id_column">ID</th>
+                    <th>업체명</th>
+                    <th>양식제출자</th>
+                    <th>col_key_seg</th>
+                    <th>공정번호</th>
+                    <th>col 1</th>
+                    <th>col_2</th>
+                    <th>저온시험 시작</th>
+                    <th>저온시험 종료</th>
+                    <th>저온시험 소요시간</th>
+                    <th>고온시험 시작</th>
+                    <th>고온시험 종료</th>
+                    <th>고온시험 소요시간</th>
+                    <th class="hidden_audit_column">데이터생성시각</th>
+                    <th class="hidden_audit_column">데이터수정시각</th>
+                    <th>입력승인</th>
+                </tr>
+            </thead>
+            <tbody>
+                
+                
+            </tbody>
+        </table>
+    </div>
+    
+    <div id="admin_save_notice" class="non_modal_notice" aria-live="polite"></div>
+    
+</section>
+<script>
+(() => {
+    const admin_grid_table = document.getElementById("admin_grid_table");
+    if (!admin_grid_table) {
+        return;
+    }
+    const header_cells = Array.from(admin_grid_table.querySelectorAll("thead th"));
+    const resize_min_width = 24;
+    let active_header_cell = null;
+    let active_min_width = resize_min_width;
+    let start_x = 0;
+    let start_width = 0;
+    const table_rows = Array.from(admin_grid_table.querySelectorAll("tbody tr"));
+    const measure_canvas = document.createElement("canvas");
+    const measure_context = measure_canvas.getContext("2d");
+    const input_fill_ratio = 0.9;
+    const text_inner_padding = 8;
+    const cell_horizontal_padding = 8;
+
+    const measure_text_width = (text) => {
+        const normalized_text = String(text || "");
+        if (!measure_context) {
+            return Math.max(16, normalized_text.length * 8 + text_inner_padding);
+        }
+        measure_context.font = getComputedStyle(admin_grid_table).font || "400 18px pretendard";
+        const measured_width = measure_context.measureText(normalized_text).width;
+        return Math.max(16, Math.ceil(measured_width) + text_inner_padding);
+    };
+
+    const get_header_min_width = (header_cell) => {
+        const header_label = String(header_cell.textContent || "").trim();
+        return Math.max(resize_min_width, measure_text_width(header_label));
+    };
+
+    const get_cell_preferred_width = (cell) => {
+        const input_or_select = cell.querySelector("input, select");
+        if (input_or_select) {
+            const value_text =
+                input_or_select.tagName === "SELECT"
+                    ? (input_or_select.options[input_or_select.selectedIndex]?.text || "")
+                    : (input_or_select.value || input_or_select.placeholder || "");
+            if (!String(value_text || "").trim()) {
+                return 0;
+            }
+            const control_required_width = measure_text_width(value_text) + cell_horizontal_padding;
+            return Math.ceil(control_required_width / input_fill_ratio);
+        }
+        return measure_text_width(cell.textContent || "") + cell_horizontal_padding;
+    };
+
+    const apply_auto_fit_column_widths = () => {
+        header_cells.forEach((header_cell, column_index) => {
+            if (header_cell.classList.contains("hidden_id_column") || header_cell.classList.contains("hidden_audit_column")) {
+                return;
+            }
+            let preferred_width = measure_text_width(header_cell.textContent || "") + cell_horizontal_padding;
+            table_rows.forEach((row) => {
+                const cell = row.children[column_index];
+                if (!cell) {
+                    return;
+                }
+                preferred_width = Math.max(preferred_width, get_cell_preferred_width(cell));
+            });
+            const next_width = Math.max(get_header_min_width(header_cell), Math.ceil(preferred_width));
+            header_cell.style.width = `${next_width}px`;
+            header_cell.style.minWidth = `${next_width}px`;
+        });
+    };
+
+    const on_mouse_move = (event) => {
+        if (!active_header_cell) {
+            return;
+        }
+        const delta_x = event.clientX - start_x;
+        const next_width = Math.max(active_min_width, start_width + delta_x);
+        active_header_cell.style.width = `${next_width}px`;
+        active_header_cell.style.minWidth = `${next_width}px`;
+    };
+
+    const on_mouse_up = () => {
+        active_header_cell = null;
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+        window.removeEventListener("mousemove", on_mouse_move);
+        window.removeEventListener("mouseup", on_mouse_up);
+    };
+
+    header_cells.forEach((header_cell) => {
+        if (header_cell.classList.contains("hidden_id_column") || header_cell.classList.contains("hidden_audit_column")) {
+            return;
+        }
+        const handle = document.createElement("span");
+        handle.className = "column_resize_handle";
+        handle.addEventListener("mousedown", (event) => {
+            event.preventDefault();
+            active_header_cell = header_cell;
+            active_min_width = get_header_min_width(header_cell);
+            start_x = event.clientX;
+            start_width = header_cell.getBoundingClientRect().width;
+            document.body.style.cursor = "col-resize";
+            document.body.style.userSelect = "none";
+            window.addEventListener("mousemove", on_mouse_move);
+            window.addEventListener("mouseup", on_mouse_up);
+        });
+        header_cell.appendChild(handle);
+    });
+    apply_auto_fit_column_widths();
+})();
+</script>
+<script>
+(() => {
+    const modal_overlay = document.getElementById("admin_guide_modal");
+    const open_button = document.getElementById("open_admin_guide_modal_button");
+    const close_button = document.getElementById("close_admin_guide_modal_button");
+    const admin_feature_storage_key = "admin_feature_target_v1";
+    if (!modal_overlay || !open_button || !close_button) {
+        return;
+    }
+
+    const apply_feature_filter = (feature_target) => {
+        const feature_sessions = Array.from(
+            document.querySelectorAll("[data-admin-feature-session]")
+        );
+        let matched_count = 0;
+        feature_sessions.forEach((section) => {
+            const section_target = section.dataset.adminFeatureSession || "";
+            if (feature_target === "all") {
+                section.style.display = "block";
+                return;
+            }
+            const is_match = section_target === feature_target;
+            section.style.display = is_match ? "block" : "none";
+            if (is_match) {
+                matched_count += 1;
+            }
+        });
+        return matched_count;
+    };
+    window.apply_admin_feature_filter = apply_feature_filter;
+
+    const open_modal = () => {
+        modal_overlay.classList.add("is_open");
+        modal_overlay.setAttribute("aria-hidden", "false");
+    };
+    const close_modal = () => {
+        modal_overlay.classList.remove("is_open");
+        modal_overlay.setAttribute("aria-hidden", "true");
+    };
+    open_button.addEventListener("click", open_modal);
+    close_button.addEventListener("click", close_modal);
+    modal_overlay.addEventListener("click", (event) => {
+        if (event.target === modal_overlay) {
+            close_modal();
+        }
+    });
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+            close_modal();
+        }
+    });
+
+    document.querySelectorAll(".admin_feature_filter_button").forEach((button) => {
+        button.addEventListener("click", () => {
+            const feature_target = button.dataset.featureTarget || "all";
+            const matched_count = apply_feature_filter(feature_target);
+            if (feature_target !== "all" && matched_count === 0) {
+                alert("현재 모드에서 해당 기능 세션을 표시할 수 없습니다.");
+                localStorage.setItem(admin_feature_storage_key, "__none__");
+                apply_feature_filter("__none__");
+                close_modal();
+                return;
+            }
+            localStorage.setItem(admin_feature_storage_key, feature_target);
+            close_modal();
+        });
+    });
+
+    const initial_feature_target = localStorage.getItem(admin_feature_storage_key) || "__none__";
+    const initial_matched_count = apply_feature_filter(initial_feature_target);
+    if (initial_feature_target !== "__none__" && initial_feature_target !== "all" && initial_matched_count === 0) {
+        localStorage.setItem(admin_feature_storage_key, "__none__");
+        apply_feature_filter("__none__");
+    }
+})();
+</script>
+<script>
+(() => {
+    const review_button = document.getElementById("admin_mark_review_complete_button");
+    const delete_button = document.getElementById("admin_delete_selected_rows_button");
+    if (!review_button || !delete_button) {
+        return;
+    }
+
+    const read_error_detail = async (response) => {
+        try {
+            const payload = await response.json();
+            if (payload && payload.detail) {
+                return payload.detail;
+            }
+        } catch (_error) {
+        }
+        return "요청에 실패했습니다.";
+    };
+
+    const collect_selected_row_ids = () => {
+        const checked_checkboxes = Array.from(
+            document.querySelectorAll(".admin_row_select_checkbox:checked")
+        );
+        if (checked_checkboxes.length === 0) {
+            return [];
+        }
+        return checked_checkboxes
+            .map((checkbox) => checkbox.closest("tr"))
+            .filter((row) => row && row.dataset.id)
+            .map((row) => Number(row.dataset.id))
+            .filter((row_id) => Number.isInteger(row_id) && row_id > 0);
+    };
+
+    review_button.addEventListener("click", async () => {
+        const selected_row_ids = collect_selected_row_ids();
+        if (selected_row_ids.length === 0) {
+            alert("선택한 행이 없습니다.");
+            return;
+        }
+        try {
+            const response = await fetch("/admin/rows/review_complete", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ row_ids: selected_row_ids }),
+            });
+            if (!response.ok) {
+                alert(await read_error_detail(response));
+                return;
+            }
+            window.location.reload();
+        } catch (_error) {
+            alert("입력승인 처리 중 네트워크 오류가 발생했습니다.");
+        }
+    });
+
+    delete_button.addEventListener("click", async () => {
+        const delete_row_ids = collect_selected_row_ids();
+        if (delete_row_ids.length === 0) {
+            alert("선택한 행이 없습니다.");
+            return;
+        }
+        if (delete_row_ids.length === 0) {
+            alert("삭제 가능한 행 ID가 없습니다.");
+            return;
+        }
+
+        try {
+            const response = await fetch("/tester/rows/delete", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ row_ids: delete_row_ids }),
+            });
+            if (!response.ok) {
+                alert(await read_error_detail(response));
+                return;
+            }
+            window.location.reload();
+        } catch (_error) {
+            alert("삭제 중 네트워크 오류가 발생했습니다.");
+        }
+    });
+
+    document.querySelectorAll(".admin_row_select_checkbox").forEach((checkbox) => {
+        checkbox.addEventListener("change", () => {
+            const row = checkbox.closest("tr");
+            if (!row) {
+                return;
+            }
+            const submission_id = (row.dataset.submissionId || "").trim();
+            if (!submission_id) {
+                return;
+            }
+            document.querySelectorAll("tr[data-submission-id]").forEach((target_row) => {
+                if ((target_row.dataset.submissionId || "").trim() !== submission_id) {
+                    return;
+                }
+                const target_checkbox = target_row.querySelector(".admin_row_select_checkbox");
+                if (!target_checkbox) {
+                    return;
+                }
+                target_checkbox.checked = checkbox.checked;
+            });
+        });
+    });
+})();
+</script>
+<section class="card" data-admin-feature-session="create_admin" style="display:none;">
+    <h3>Admin 아이디 생성</h3>
+    <p class="detail_guide">최하단에서 부서, 양식제출자, 전화번호, Password를 입력해 Admin 계정을 생성합니다.</p>
+    
+    
+    <form method="post" action="/admin/create_admin" class="form_stack dropdown_inline_form">
+        <label for="department_name">부서</label>
+        <input id="department_name" name="department_name" type="text" required>
+
+        <label for="display_name">양식제출자</label>
+        <input id="display_name" name="display_name" type="text" required>
+
+        <label for="phone_number">전화번호</label>
+        <input id="phone_number" name="phone_number" type="text" required>
+
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" required>
+
+        <button type="submit">Admin 생성</button>
+    </form>
+</section>
+<section class="card" data-admin-feature-session="create_tester" style="display:none;">
+    <h3>Tester 아이디 생성</h3>
+    <p class="detail_guide">업체명, 양식제출자, 전화번호, Password를 입력해 Tester 계정을 생성합니다.</p>
+    
+    
+    <form method="post" action="/admin/create_tester" class="form_stack dropdown_inline_form">
+        <label for="tester_company_name">업체명</label>
+        <input id="tester_company_name" name="company_name" type="text" required>
+
+        <label for="tester_display_name">양식제출자</label>
+        <input id="tester_display_name" name="display_name" type="text" required>
+
+        <label for="tester_phone_number">전화번호</label>
+        <input id="tester_phone_number" name="phone_number" type="text" required>
+
+        <label for="tester_password">Password</label>
+        <input id="tester_password" name="password" type="password" required>
+
+        <button type="submit">Tester 생성</button>
+    </form>
+</section>
+<section class="card" data-admin-feature-session="approve_join" style="display:none;">
+    <h3>Tester join 요청 수락</h3>
+    <div class="tester_table_wrap">
+        <table class="basic_table">
+            <thead>
+                <tr>
+                    <th>업체명</th>
+                    <th>양식제출자</th>
+                    <th>전화번호</th>
+                    <th>요청 시각</th>
+                    <th>처리</th>
+                </tr>
+            </thead>
+            <tbody>
+                
+                <tr>
+                    <td colspan="5">대기 중인 요청이 없습니다.</td>
+                </tr>
+                
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<script>
+(() => {
+    const save_notice = document.getElementById("admin_save_notice");
+    if (!save_notice) {
+        return;
+    }
+
+    const row_save_timers = new Map();
+
+    const read_error_detail = async (response) => {
+        try {
+            const payload = await response.json();
+            if (payload && payload.detail) {
+                return payload.detail;
+            }
+        } catch (_error) {
+        }
+        return "요청에 실패했습니다.";
+    };
+
+    const render_notice = (message, type_name) => {
+        save_notice.className = `non_modal_notice ${type_name}`;
+        save_notice.innerHTML = `<div>${message}</div>`;
+    };
+
+    const nullable_field_names = new Set([
+        "data_writer_name",
+        "field_01", "field_02", "field_03", "field_04", "field_05",
+        "field_06", "field_07", "field_08", "field_09", "field_10",
+        "low_test_started_at", "low_test_ended_at", "low_test_delta",
+        "high_test_started_at", "high_test_ended_at", "high_test_delta",
+    ]);
+
+    const build_row_payload = (row) => {
+        const payload = {};
+        row.querySelectorAll("input[data-field]").forEach((input) => {
+            const field_name = input.dataset.field;
+            const value = input.value.trim();
+            payload[field_name] = nullable_field_names.has(field_name) && !value ? null : value;
+        });
+        return payload;
+    };
+
+    const serialize_payload = (payload) => JSON.stringify(payload);
+
+    const is_row_dirty = (row) => {
+        const current_payload = build_row_payload(row);
+        const current_serialized = serialize_payload(current_payload);
+        return current_serialized !== (row.dataset.initialPayload || "");
+    };
+
+    const save_row = async (row) => {
+        const payload = build_row_payload(row);
+        if (!is_row_dirty(row)) {
+            return;
+        }
+        if (!payload.key_1 || !payload.key_2 || !payload.key_3) {
+            render_notice("업체명, col_key_seg, 공정번호는 필수입니다.", "error");
+            return;
+        }
+
+        try {
+            const response = await fetch("/tester/rows/upsert", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+            });
+            if (!response.ok) {
+                render_notice(await read_error_detail(response), "error");
+                return;
+            }
+            row.dataset.initialPayload = serialize_payload(payload);
+            render_notice("수정 내용이 자동 저장되었습니다.", "success");
+        } catch (_error) {
+            render_notice("자동 저장 중 네트워크 오류가 발생했습니다.", "error");
+        }
+    };
+
+    const schedule_row_save = (row) => {
+        if (!is_row_dirty(row)) {
+            return;
+        }
+        const existing_timer = row_save_timers.get(row);
+        if (existing_timer) {
+            clearTimeout(existing_timer);
+        }
+        const timer_id = setTimeout(() => {
+            save_row(row);
+            row_save_timers.delete(row);
+        }, 400);
+        row_save_timers.set(row, timer_id);
+    };
+
+    document.querySelectorAll("tr.admin_editable_row").forEach((row) => {
+        row.dataset.initialPayload = serialize_payload(build_row_payload(row));
+        row.querySelectorAll("input[data-field]").forEach((input) => {
+            input.addEventListener("input", () => schedule_row_save(row));
+            input.addEventListener("change", () => schedule_row_save(row));
+        });
+    });
+})();
+</script>
+
+<section class="card" data-admin-feature-session="dropdown_add" style="display:none;">
+    <h3>드롭다운 항목 추가</h3>
+    <p class="detail_guide">Tester의 업체명 / col_key_seg / col 1, col_2 드롭다운 항목을 추가합니다.</p>
+    <form method="post" action="/admin/dropdown_options/add" class="form_stack dropdown_inline_form">
+        <label for="dropdown_field_name">필드</label>
+        <select id="dropdown_field_name" name="field_name" required>
+            <option value="key_1">업체명</option>
+            <option value="key_2">col_key_seg</option>
+            <option value="key_3">공정번호</option>
+            <option value="field_01">col 1</option>
+            <option value="field_02">col_2</option>
+        </select>
+
+        <label for="dropdown_option_value">항목 값</label>
+        <input id="dropdown_option_value" name="option_value" type="text" required>
+
+        <button type="submit">항목 추가</button>
+    </form>
+</section>
+<section class="card" data-admin-feature-session="dropdown_delete" style="display:none;">
+    <h3>드롭다운 항목 삭제</h3>
+    <p class="detail_guide">필드와 항목 값을 입력해 기존 드롭다운 항목을 삭제합니다.</p>
+    <form method="post" action="/admin/dropdown_options/delete" class="form_stack dropdown_inline_form">
+        <label for="dropdown_delete_field_name">필드</label>
+        <select id="dropdown_delete_field_name" name="field_name" required>
+            <option value="key_1">업체명</option>
+            <option value="key_2">col_key_seg</option>
+            <option value="key_3">공정번호</option>
+            <option value="field_01">col 1</option>
+            <option value="field_02">col_2</option>
+        </select>
+
+        <label for="dropdown_delete_option_value">항목 값</label>
+        <select id="dropdown_delete_option_value" name="option_value" required>
+            <option value="" selected disabled hidden>항목 값을 선택하세요</option>
+        </select>
+
+        <button type="submit">항목 삭제</button>
+    </form>
+</section>
+<script>
+(() => {
+    const field_select = document.getElementById("dropdown_delete_field_name");
+    const option_select = document.getElementById("dropdown_delete_option_value");
+    if (!field_select || !option_select) {
+        return;
+    }
+
+    const fill_option_select = (option_values) => {
+        option_select.innerHTML = "";
+        const empty_option = document.createElement("option");
+        empty_option.value = "";
+        empty_option.textContent = "항목 값을 선택하세요";
+        empty_option.selected = true;
+        empty_option.disabled = true;
+        empty_option.hidden = true;
+        option_select.appendChild(empty_option);
+        option_values.forEach((option_value) => {
+            const option = document.createElement("option");
+            option.value = option_value;
+            option.textContent = option_value;
+            option_select.appendChild(option);
+        });
+    };
+
+    const refresh_option_values = async () => {
+        const field_name = (field_select.value || "").trim();
+        if (!field_name) {
+            fill_option_select([]);
+            return;
+        }
+        try {
+            const response = await fetch(`/admin/dropdown_options/${encodeURIComponent(field_name)}`);
+            if (!response.ok) {
+                fill_option_select([]);
+                return;
+            }
+            const payload = await response.json();
+            fill_option_select(Array.isArray(payload.option_values) ? payload.option_values : []);
+        } catch (_error) {
+            fill_option_select([]);
+        }
+    };
+
+    field_select.addEventListener("change", refresh_option_values);
+    refresh_option_values();
+})();
+</script>
+
+    </main>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

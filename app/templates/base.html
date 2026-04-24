@@ -13,11 +13,11 @@
             <h1>
                 <img src="/static/images/huvitz_logo.svg" alt="Huvitz" class="header_logo">
                 {% if request.url.path.startswith('/admin') %}
-                ELT Room 시험소요 데이터 트래킹 시스템
+                ELT Room 시험시간 소요 데이터 입력관리 시스템
                 {% elif request.url.path.startswith('/tester') %}
-                ELT Room 시험소요 데이터 입력 시스템
+                ELT Room 시험시간 소요 데이터 입력 시스템
                 {% else %}
-                ELT Room 시험소요 데이터 관리 시스템
+                ELT Room 시험시간 소요 데이터 관리 시스템
                 {% endif %}
             </h1>
             <a
