@@ -167,6 +167,11 @@ button:disabled {
     width: fit-content;
 }
 
+.form_stack .project_standard_button {
+    min-height: 29px;
+    padding: 6px 12px;
+}
+
 .dropdown_inline_form {
     display: flex;
     align-items: center;
@@ -512,6 +517,15 @@ button:disabled {
     border-radius: 8px;
     background: #FFFFFF;
     padding: 16px;
+}
+.message_modal_success .guide_modal_card {
+    border-color: #A8CBB5;
+    background: #EAF7EF;
+}
+
+.message_modal_success #app_message_modal_title,
+.message_modal_success #app_message_modal_body {
+    color: #205D35;
 }
 
 /* Global scrollbar thickness up */

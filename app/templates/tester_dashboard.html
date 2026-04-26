@@ -1,29 +1,24 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="card">
-    <h3>OO업체 OOO 님, 안녕하세요.</h3>
+    <h3>{{ (current_company_name or "OO업체") }} {{ (current_display_name or "OOO") }} 님, 안녕하세요.</h3>
 </section>
-<section class="card">
-    <div class="section_header_row">
-        <button id="open_tester_guide_modal_button" type="button">양식 작성법</button>
-        <div></div>
-    </div>
-</section>
-
-<div id="tester_guide_modal" class="guide_modal_overlay" aria-hidden="true">
-    <div class="guide_modal_card" role="dialog" aria-modal="true" aria-labelledby="tester_guide_modal_title">
-        <div class="section_header_row">
-            <h3 id="tester_guide_modal_title">입력 방법</h3>
-            <button id="close_tester_guide_modal_button" type="button">닫기</button>
-        </div>
-        <p class="detail_guide">STEP 1. 양식 작성</p>
-        <p class="detail_guide">STEP 2. 양식 제출</p>
-    </div>
-</div>
 
 <section class="card">
     <div class="section_header_row">
-        <h3>STEP 1. 양식 작성</h3>
+        <h3>STEP 1. 양식 발급</h3>
+    </div>
+    <p class="detail_guide">행 값을 입력하면 자동저장 시 양식제출ID가 자동 발급됩니다. 제출 단위를 새로 시작하려면 양식 발급 버튼을 눌러주세요.</p>
+    <input type="hidden" id="tester_form_submission_id_value" value="" autocomplete="off">
+    <div class="section_header_row" style="align-items: center; gap: 1rem; flex-wrap: wrap;">
+        <button id="tester_start_submission_button" type="button" class="project_standard_button">양식 발급</button>
+    </div>
+    <div id="save_validation_notice" class="non_modal_notice" aria-live="polite"></div>
+</section>
+
+<section class="card">
+    <div class="section_header_row">
+        <h3>STEP 2. 양식 작성</h3>
         <div class="table_action_bar">
             <button id="col_fill_button" type="button" class="qc_mode_action_button">SAMPLE 작성</button>
             <button id="add_row_button" type="button">행 추가</button>
@@ -41,47 +36,38 @@
                     <th>양식제출ID</th>
                     <th>업체명</th>
                     <th>양식제출자</th>
-                    <th>col_key_seg</th>
+                    <th>모델명</th>
                     <th>공정번호</th>
-                    <th>col 1</th>
-                    <th>col_2</th>
-                    <th>저온시험 시작</th>
-                    <th>저온시험 종료</th>
-                    <th>저온시험 소요시간</th>
-                    <th>고온시험 시작</th>
-                    <th>고온시험 종료</th>
-                    <th>고온시험 소요시간</th>
+                    <th>월</th>
+                    <th>검사대수</th>
+                    <th>저온 투입일</th>
+                    <th>저온 완료일</th>
+                    <th>저온 시간</th>
+                    <th>고온 투입일</th>
+                    <th>고온 완료일</th>
+                    <th>고온 시간</th>
                 </tr>
             </thead>
             <tbody
                 id="tester_grid_body"
                 data-current-display-name="{{ current_display_name or '' }}"
                 data-current-company-name="{{ current_company_name or '' }}"
+                data-active-form-submission-id=""
             >
                 {% for row in recent_test_results %}
                 <tr class="editable_row" data-id="{{ row.id }}">
                     <td><input class="row_select_checkbox" type="checkbox"></td>
                     <td class="id_cell hidden_id_column">{{ row.id }}</td>
                     <td>
-                        <span class="submission_id_cell_value delta_value{% if not row.submission_id %} is_placeholder{% endif %}">{{ row.submission_id or "자동계산" }}</span>
+                        <span class="submission_id_cell_value delta_value{% if not row.form_submission_id %} is_placeholder{% endif %}">{{ row.form_submission_id or "제출 시작 전" }}</span>
                     </td>
                     <td>
                         <input type="hidden" data-field="key_1" value="{{ row.key_1 or current_company_name or '' }}">
                         <span class="company_name_cell_value delta_value{% if not (row.key_1 or current_company_name) %} is_placeholder{% endif %}">{{ row.key_1 or current_company_name or "자동계산" }}</span>
                     </td>
                     <td>
-                        <span class="data_writer_name_cell_value delta_value{% if not row.data_writer_name %} is_placeholder{% endif %}">{{ row.data_writer_name or "자동계산" }}</span>
-                    </td>
-                    <td>
-                        <select data-field="key_2">
-                            <option value=""></option>
-                            {% if row.key_2 and row.key_2 not in dropdown_options_map.get("key_2", []) %}
-                            <option value="{{ row.key_2 }}" selected>{{ row.key_2 }}</option>
-                            {% endif %}
-                            {% for option_value in dropdown_options_map.get("key_2", []) %}
-                            <option value="{{ option_value }}" {% if (row.key_2 or "") == option_value %}selected{% endif %}>{{ option_value }}</option>
-                            {% endfor %}
-                        </select>
+                        <input type="hidden" data-field="key_2" value="{{ row.key_2 or current_display_name or '' }}">
+                        <span class="data_writer_name_cell_value delta_value{% if not (row.key_2 or row.data_writer_name or current_display_name) %} is_placeholder{% endif %}">{{ row.key_2 or row.data_writer_name or current_display_name or "자동계산" }}</span>
                     </td>
                     <td>
                         <select data-field="key_3">
@@ -91,6 +77,17 @@
                             {% endif %}
                             {% for option_value in dropdown_options_map.get("key_3", []) %}
                             <option value="{{ option_value }}" {% if (row.key_3 or "") == option_value %}selected{% endif %}>{{ option_value }}</option>
+                            {% endfor %}
+                        </select>
+                    </td>
+                    <td>
+                        <select data-field="key_4">
+                            <option value=""></option>
+                            {% if row.key_4 and row.key_4 not in dropdown_options_map.get("key_4", []) %}
+                            <option value="{{ row.key_4 }}" selected>{{ row.key_4 }}</option>
+                            {% endif %}
+                            {% for option_value in dropdown_options_map.get("key_4", []) %}
+                            <option value="{{ option_value }}" {% if (row.key_4 or "") == option_value %}selected{% endif %}>{{ option_value }}</option>
                             {% endfor %}
                         </select>
                     </td>
@@ -150,39 +147,8 @@
 </section>
 
 <section class="card">
-    <button id="save_all_rows_button" type="button">STEP 2. 양식 제출</button>
-    <div id="save_validation_notice" class="non_modal_notice" aria-live="polite"></div>
+    <form method="post" action="/logout" class="form_stack">
+        <button type="submit" class="project_standard_button">로그아웃</button>
+    </form>
 </section>
-<script>
-(() => {
-    const modal_overlay = document.getElementById("tester_guide_modal");
-    const open_button = document.getElementById("open_tester_guide_modal_button");
-    const close_button = document.getElementById("close_tester_guide_modal_button");
-    if (!modal_overlay || !open_button || !close_button) {
-        return;
-    }
-
-    const open_modal = () => {
-        modal_overlay.classList.add("is_open");
-        modal_overlay.setAttribute("aria-hidden", "false");
-    };
-    const close_modal = () => {
-        modal_overlay.classList.remove("is_open");
-        modal_overlay.setAttribute("aria-hidden", "true");
-    };
-
-    open_button.addEventListener("click", open_modal);
-    close_button.addEventListener("click", close_modal);
-    modal_overlay.addEventListener("click", (event) => {
-        if (event.target === modal_overlay) {
-            close_modal();
-        }
-    });
-    document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape") {
-            close_modal();
-        }
-    });
-})();
-</script>
 {% endblock %}

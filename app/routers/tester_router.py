@@ -1,10 +1,19 @@
+import os
+
 from fastapi import APIRouter, HTTPException, Request, status
+from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 
+from app.auth import ROLE_TESTER
 from app.deps import current_role_name_dependency
 from app.deps import database_session_dependency
 from app.schemas import TestResultDeleteInput, TestResultPartialInput, TestResultSaveAllInput
-from app.models import UserAccount
+from app.models import TestResult, UserAccount
+from app.services.form_submission_service import (
+    assert_tester_may_write_submission,
+    create_form_submission,
+    get_form_submission,
+)
 from app.services.test_result_service import (
     list_unreviewed_test_results,
     mark_high_test_end,
@@ -41,8 +50,41 @@ def render_tester_dashboard(
     database_session: database_session_dependency,
     current_role_name: current_role_name_dependency,
 ):
+    qc_mode_enabled = os.getenv("QC_MODE", "True").strip().lower() in {"1", "true", "yes", "on"}
+    if qc_mode_enabled and not (request.cookies.get("phone_number") or "").strip():
+        return RedirectResponse(url="/login", status_code=303)
     recent_test_results = list_unreviewed_test_results(database_session=database_session)
     dropdown_options_map = list_dropdown_options_map(database_session=database_session)
+    default_month_options = [str(month) for month in range(1, 13)]
+    existing_month_options = [
+        str(option_value).strip()
+        for option_value in (dropdown_options_map.get("field_01") or [])
+        if str(option_value).strip()
+    ]
+    month_option_set = set(default_month_options)
+    merged_month_options = list(default_month_options)
+    for option_value in existing_month_options:
+        if option_value in month_option_set:
+            continue
+        merged_month_options.append(option_value)
+        month_option_set.add(option_value)
+    dropdown_options_map["field_01"] = merged_month_options
+
+    default_count_options = [str(count) for count in range(1, 31)]
+    existing_count_options = [
+        str(option_value).strip()
+        for option_value in (dropdown_options_map.get("field_02") or [])
+        if str(option_value).strip()
+    ]
+    count_option_set = set(default_count_options)
+    merged_count_options = list(default_count_options)
+    for option_value in existing_count_options:
+        if option_value in count_option_set:
+            continue
+        merged_count_options.append(option_value)
+        count_option_set.add(option_value)
+    dropdown_options_map["field_02"] = merged_count_options
+
     current_display_name, current_company_name = _get_current_user_info(
         request=request,
         database_session=database_session,
@@ -53,7 +95,7 @@ def render_tester_dashboard(
         name="tester_dashboard.html",
         context={
             "request": request,
-            "page_title": "Tester Dashboard",
+            "page_title": "ELT 시험 데이터 입력 시스템",
             "recent_test_results": recent_test_results,
             "current_role_name": current_role_name,
             "current_display_name": current_display_name,
@@ -63,20 +105,119 @@ def render_tester_dashboard(
     )
 
 
+@tester_router.post("/submissions")
+def create_submission(
+    request: Request,
+    database_session: database_session_dependency,
+):
+    phone_number = (request.cookies.get("phone_number") or "").strip()
+    if not phone_number:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="로그인(전화번호)이 필요합니다. 다시 로그인해 주세요.",
+        )
+    sub = create_form_submission(
+        database_session=database_session,
+        created_by_phone=phone_number,
+    )
+    return {
+        "form_submission_id": sub.submission_id,
+        "status": sub.status,
+    }
+
+
+@tester_router.get("/submissions/{form_submission_id}")
+def get_tester_submission(
+    request: Request,
+    form_submission_id: str,
+    database_session: database_session_dependency,
+):
+    sub = get_form_submission(
+        database_session=database_session,
+        submission_id=form_submission_id,
+    )
+    if sub is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Submission not found.",
+        )
+    phone_number = (request.cookies.get("phone_number") or "").strip()
+    if (
+        phone_number
+        and sub.created_by_phone
+        and sub.created_by_phone.strip() != phone_number
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="이 submission에 접근할 수 없습니다.",
+        )
+    return {
+        "form_submission_id": sub.submission_id,
+        "status": sub.status,
+        "created_at": sub.created_at,
+    }
+
+
+def _tester_may_write_rows(
+    request: Request,
+    database_session,
+    test_result_partial_input: TestResultPartialInput,
+) -> None:
+    phone = (request.cookies.get("phone_number") or "").strip()
+    assert_tester_may_write_submission(
+        database_session=database_session,
+        submission_id=test_result_partial_input.form_submission_id,
+        tester_phone=phone,
+    )
+
+
 @tester_router.post("/rows/upsert")
 def upsert_tester_row(
     request: Request,
     test_result_partial_input: TestResultPartialInput,
     database_session: database_session_dependency,
+    current_role_name: current_role_name_dependency,
 ):
+    target_id = (test_result_partial_input.form_submission_id or "").strip()
+    if not target_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="form_submission_id is required",
+        )
+    # 제출 완료(submitted) 이후에는 서버에서도 편집을 막는다.
+    try:
+        assert_tester_may_write_submission(
+            database_session=database_session,
+            submission_id=target_id,
+            tester_phone="",
+        )
+    except ValueError as exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exception),
+        ) from exception
     current_display_name, _current_company_name = _get_current_user_info(
         request=request,
         database_session=database_session,
     )
     if current_display_name:
+        test_result_partial_input.key_2 = current_display_name
         test_result_partial_input.data_writer_name = current_display_name
+    if current_role_name == ROLE_TESTER:
+        try:
+            _tester_may_write_rows(
+                request=request,
+                database_session=database_session,
+                test_result_partial_input=test_result_partial_input,
+            )
+        except ValueError as exception:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exception),
+            ) from exception
 
     try:
+        test_result_partial_input.form_submission_id = target_id
         test_result = upsert_partial_test_result(
             database_session=database_session,
             test_result_partial_input=test_result_partial_input,
@@ -90,18 +231,53 @@ def upsert_tester_row(
     return {
         "message": "Row upserted.",
         "id": test_result.id,
-        "submission_id": test_result.submission_id,
+        "form_submission_id": test_result.form_submission_id,
         "data_writer_name": test_result.data_writer_name,
         "key_1": test_result.key_1,
         "key_2": test_result.key_2,
         "key_3": test_result.key_3,
+        "key_4": test_result.key_4,
         "created_at": test_result.created_at,
         "updated_at": test_result.updated_at,
     }
 
 
+def _assert_tester_draft_submission_for_row(
+    request: Request,
+    database_session,
+    test_result_id: int,
+    current_role_name: str,
+) -> None:
+    if current_role_name != ROLE_TESTER:
+        return
+    phone = (request.cookies.get("phone_number") or "").strip()
+    tr = database_session.get(TestResult, test_result_id)
+    if tr is None or not (tr.submission_id or "").strip():
+        return
+    assert_tester_may_write_submission(
+        database_session=database_session,
+        submission_id=tr.submission_id,
+        tester_phone=phone,
+    )
+
+
 @tester_router.post("/test_result/{id}/low_test/start")
-def start_low_test(id: int, database_session: database_session_dependency):
+def start_low_test(
+    id: int,
+    request: Request,
+    database_session: database_session_dependency,
+    current_role_name: current_role_name_dependency,
+):
+    try:
+        if current_role_name == ROLE_TESTER:
+            _assert_tester_draft_submission_for_row(
+                request, database_session, id, current_role_name
+            )
+    except ValueError as exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exception),
+        ) from exception
     try:
         test_result = mark_low_test_start(database_session=database_session, test_result_id=id)
     except LookupError as exception:
@@ -123,7 +299,22 @@ def start_low_test(id: int, database_session: database_session_dependency):
 
 
 @tester_router.post("/test_result/{id}/low_test/end")
-def end_low_test(id: int, database_session: database_session_dependency):
+def end_low_test(
+    id: int,
+    request: Request,
+    database_session: database_session_dependency,
+    current_role_name: current_role_name_dependency,
+):
+    try:
+        if current_role_name == ROLE_TESTER:
+            _assert_tester_draft_submission_for_row(
+                request, database_session, id, current_role_name
+            )
+    except ValueError as exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exception),
+        ) from exception
     try:
         test_result = mark_low_test_end(database_session=database_session, test_result_id=id)
     except LookupError as exception:
@@ -146,7 +337,22 @@ def end_low_test(id: int, database_session: database_session_dependency):
 
 
 @tester_router.post("/test_result/{id}/high_test/start")
-def start_high_test(id: int, database_session: database_session_dependency):
+def start_high_test(
+    id: int,
+    request: Request,
+    database_session: database_session_dependency,
+    current_role_name: current_role_name_dependency,
+):
+    try:
+        if current_role_name == ROLE_TESTER:
+            _assert_tester_draft_submission_for_row(
+                request, database_session, id, current_role_name
+            )
+    except ValueError as exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exception),
+        ) from exception
     try:
         test_result = mark_high_test_start(database_session=database_session, test_result_id=id)
     except LookupError as exception:
@@ -168,7 +374,22 @@ def start_high_test(id: int, database_session: database_session_dependency):
 
 
 @tester_router.post("/test_result/{id}/high_test/end")
-def end_high_test(id: int, database_session: database_session_dependency):
+def end_high_test(
+    id: int,
+    request: Request,
+    database_session: database_session_dependency,
+    current_role_name: current_role_name_dependency,
+):
+    try:
+        if current_role_name == ROLE_TESTER:
+            _assert_tester_draft_submission_for_row(
+                request, database_session, id, current_role_name
+            )
+    except ValueError as exception:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exception),
+        ) from exception
     try:
         test_result = mark_high_test_end(database_session=database_session, test_result_id=id)
     except LookupError as exception:
@@ -192,9 +413,27 @@ def end_high_test(id: int, database_session: database_session_dependency):
 
 @tester_router.post("/rows/delete")
 def delete_tester_rows(
+    request: Request,
     test_result_delete_input: TestResultDeleteInput,
     database_session: database_session_dependency,
+    current_role_name: current_role_name_dependency,
 ):
+    phone = (request.cookies.get("phone_number") or "").strip()
+    if current_role_name == ROLE_TESTER:
+        for row_id in test_result_delete_input.row_ids:
+            tr = database_session.get(TestResult, int(row_id))
+            if tr is not None and (tr.submission_id or "").strip():
+                try:
+                    assert_tester_may_write_submission(
+                        database_session=database_session,
+                        submission_id=tr.submission_id,
+                        tester_phone=phone,
+                    )
+                except ValueError as exception:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=str(exception),
+                    ) from exception
     deleted_count = delete_test_results_by_ids(
         database_session=database_session,
         row_ids=test_result_delete_input.row_ids,
@@ -207,14 +446,48 @@ def save_all_tester_rows(
     request: Request,
     test_result_save_all_input: TestResultSaveAllInput,
     database_session: database_session_dependency,
+    current_role_name: current_role_name_dependency,
 ):
+    for row in test_result_save_all_input.rows:
+        target_id = (row.form_submission_id or "").strip()
+        if not target_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="form_submission_id is required",
+            )
+        try:
+            assert_tester_may_write_submission(
+                database_session=database_session,
+                submission_id=target_id,
+                tester_phone="",
+            )
+        except ValueError as exception:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exception),
+            ) from exception
+        row.form_submission_id = target_id
     current_display_name, _current_company_name = _get_current_user_info(
         request=request,
         database_session=database_session,
     )
     if current_display_name:
         for row in test_result_save_all_input.rows:
+            row.key_2 = current_display_name
             row.data_writer_name = current_display_name
+    if current_role_name == ROLE_TESTER:
+        for row in test_result_save_all_input.rows:
+            try:
+                _tester_may_write_rows(
+                    request=request,
+                    database_session=database_session,
+                    test_result_partial_input=row,
+                )
+            except ValueError as exception:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=str(exception),
+                ) from exception
 
     try:
         save_all_test_results_atomically(

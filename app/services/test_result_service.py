@@ -1,15 +1,15 @@
 from datetime import datetime
 
-from sqlalchemy import delete, or_, select, update
+from sqlalchemy import delete, exists, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models import TestResult, get_utc_now_datetime
+from app.models import FormSubmission, TestResult, get_utc_now_datetime
 from app.schemas import TestResultPartialInput
 
 
 PARTIAL_UPDATE_FIELD_NAMES = [
-    "submission_id",
+    "form_submission_id",
     "data_writer_name",
     "is_reviewed",
     "field_01",
@@ -56,14 +56,16 @@ def _upsert_partial_test_result_internal(
     key_1 = _strip_if_string(test_result_partial_input.key_1)
     key_2 = _strip_if_string(test_result_partial_input.key_2)
     key_3 = _strip_if_string(test_result_partial_input.key_3)
-    if not key_1 or not key_2 or not key_3:
-        raise ValueError("key_1, key_2, and key_3 must be non-empty after trimming.")
+    key_4 = _strip_if_string(test_result_partial_input.key_4)
+    if not key_1 or not key_2 or not key_3 or not key_4:
+        raise ValueError("key_1, key_2, key_3, and key_4 must be non-empty after trimming.")
 
     existing_test_result = database_session.scalar(
         select(TestResult).where(
             TestResult.key_1 == key_1,
             TestResult.key_2 == key_2,
             TestResult.key_3 == key_3,
+            TestResult.key_4 == key_4,
         )
     )
 
@@ -72,6 +74,7 @@ def _upsert_partial_test_result_internal(
             key_1=key_1,
             key_2=key_2,
             key_3=key_3,
+            key_4=key_4,
         )
         database_session.add(existing_test_result)
 
@@ -80,12 +83,18 @@ def _upsert_partial_test_result_internal(
         if new_value is not None:
             setattr(existing_test_result, field_name, new_value)
 
+    # enforce: form_submission_id must always be present for new writes
+    if not (existing_test_result.form_submission_id or "").strip():
+        raise ValueError("form_submission_id is required.")
+
+    existing_test_result.data_writer_name = key_2
+
     if commit:
         try:
             database_session.commit()
         except IntegrityError as exception:
             database_session.rollback()
-            raise ValueError("A row with the same key_1, key_2, key_3 already exists.") from exception
+            raise ValueError("A row with the same key_1, key_2, key_3, key_4 already exists.") from exception
         database_session.refresh(existing_test_result)
     return existing_test_result
 
@@ -98,9 +107,21 @@ def list_recent_test_results(database_session: Session, limit: int = 20) -> list
 
 
 def list_unreviewed_test_results(database_session: Session) -> list[TestResult]:
+    """draft submission 또는 form_submission_id 없는 미검토 행."""
+    unreviewed = or_(TestResult.is_reviewed == False, TestResult.is_reviewed.is_(None))  # noqa: E712
+    draft_or_legacy = or_(
+        TestResult.form_submission_id.is_(None),
+        TestResult.form_submission_id == "",
+        exists(
+            select(1).where(
+                FormSubmission.submission_id == TestResult.form_submission_id,
+                FormSubmission.status == "draft",
+            )
+        ),
+    )
     result_rows = database_session.scalars(
         select(TestResult)
-        .where(or_(TestResult.is_reviewed == False, TestResult.is_reviewed.is_(None)))  # noqa: E712
+        .where(unreviewed, draft_or_legacy)
         .order_by(TestResult.updated_at.desc())
     )
     return list(result_rows)
@@ -204,7 +225,7 @@ def save_all_test_results_atomically(
         database_session.commit()
     except IntegrityError as exception:
         database_session.rollback()
-        raise ValueError("A row with the same key_1, key_2, key_3 already exists.") from exception
+        raise ValueError("A row with the same key_1, key_2, key_3, key_4 already exists.") from exception
     except Exception:
         database_session.rollback()
         raise

@@ -45,7 +45,12 @@ def initialize_database() -> None:
 
     models.Base.metadata.create_all(bind=engine)
     _ensure_user_account_columns()
+    _migrate_test_result_to_four_key_if_needed()
     _ensure_test_result_columns()
+    _ensure_form_submission_columns()
+    _backfill_form_submissions()
+    _ensure_ui_sample_profiles()
+    _ensure_default_dropdown_options()
 
 
 def _ensure_user_account_columns() -> None:
@@ -68,9 +73,27 @@ def _ensure_user_account_columns() -> None:
             )
 
 
+def _ensure_form_submission_columns() -> None:
+    """form_submission: submission_id, status, created_at, submitted_at, decided_at (+ ORM extras)."""
+    with engine.begin() as connection:
+        table_exists = connection.execute(
+            text("SELECT 1 FROM sqlite_master WHERE type='table' AND name='form_submission' LIMIT 1")
+        ).fetchone()
+        if table_exists is None:
+            return
+        existing_column_names = {
+            row[1] for row in connection.execute(text("PRAGMA table_info(form_submission)"))
+        }
+        if "submitted_at" not in existing_column_names:
+            connection.execute(
+                text("ALTER TABLE form_submission ADD COLUMN submitted_at DATETIME")
+            )
+
+
 def _ensure_test_result_columns() -> None:
     expected_columns = {
         "submission_id": "TEXT",
+        "form_submission_id": "TEXT",
         "data_writer_name": "TEXT",
         "is_reviewed": "INTEGER DEFAULT 0",
     }
@@ -84,3 +107,143 @@ def _ensure_test_result_columns() -> None:
             connection.execute(
                 text(f"ALTER TABLE test_result ADD COLUMN {column_name} {column_type}")
             )
+
+        # Backfill: prefer existing submission_id -> form_submission_id
+        existing_column_names = {
+            row[1] for row in connection.execute(text("PRAGMA table_info(test_result)"))
+        }
+        if "form_submission_id" in existing_column_names and "submission_id" in existing_column_names:
+            connection.execute(
+                text(
+                    """
+                    UPDATE test_result
+                    SET form_submission_id = submission_id
+                    WHERE (form_submission_id IS NULL OR TRIM(form_submission_id) = '')
+                      AND submission_id IS NOT NULL AND TRIM(submission_id) <> ''
+                    """
+                )
+            )
+
+
+def _migrate_test_result_to_four_key_if_needed() -> None:
+    """MVP(3-key) DB → 운영(4-key) 스키마: key_1=업체명, key_2=양식, key_3=모델, key_4=공정."""
+    with engine.begin() as connection:
+        table_exists = connection.execute(
+            text(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='test_result' LIMIT 1"
+            )
+        ).fetchone()
+        if table_exists is None:
+            return
+
+        existing_column_names = {
+            row[1] for row in connection.execute(text("PRAGMA table_info(test_result)"))
+        }
+        if "key_4" in existing_column_names:
+            return
+
+        connection.execute(
+            text(
+                """
+                CREATE TABLE test_result__new (
+                    id INTEGER NOT NULL,
+                    key_1 TEXT NOT NULL,
+                    key_2 TEXT NOT NULL,
+                    key_3 TEXT NOT NULL,
+                    key_4 TEXT NOT NULL,
+                    submission_id TEXT,
+                    data_writer_name TEXT,
+                    is_reviewed INTEGER NOT NULL DEFAULT 0,
+                    field_01 TEXT,
+                    field_02 TEXT,
+                    field_03 TEXT,
+                    field_04 TEXT,
+                    field_05 TEXT,
+                    field_06 TEXT,
+                    field_07 TEXT,
+                    field_08 TEXT,
+                    field_09 TEXT,
+                    field_10 TEXT,
+                    low_test_started_at TEXT,
+                    low_test_ended_at TEXT,
+                    low_test_delta TEXT,
+                    high_test_started_at TEXT,
+                    high_test_ended_at TEXT,
+                    high_test_delta TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    PRIMARY KEY (id),
+                    CONSTRAINT uq_test_result_key_quartet
+                        UNIQUE (key_1, key_2, key_3, key_4)
+                )
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                INSERT INTO test_result__new (
+                    id, key_1, key_2, key_3, key_4, submission_id, data_writer_name, is_reviewed,
+                    field_01, field_02, field_03, field_04, field_05, field_06, field_07, field_08,
+                    field_09, field_10,
+                    low_test_started_at, low_test_ended_at, low_test_delta,
+                    high_test_started_at, high_test_ended_at, high_test_delta,
+                    created_at, updated_at
+                )
+                SELECT
+                    id,
+                    key_1,
+                    COALESCE(NULLIF(TRIM(data_writer_name), ''), '미입력'),
+                    key_2,
+                    key_3,
+                    submission_id,
+                    COALESCE(NULLIF(TRIM(data_writer_name), ''), '미입력'),
+                    is_reviewed,
+                    field_01, field_02, field_03, field_04, field_05, field_06, field_07, field_08,
+                    field_09, field_10,
+                    low_test_started_at, low_test_ended_at, low_test_delta,
+                    high_test_started_at, high_test_ended_at, high_test_delta,
+                    created_at, updated_at
+                FROM test_result
+                """
+            )
+        )
+        connection.execute(text("DROP TABLE test_result"))
+        connection.execute(text("ALTER TABLE test_result__new RENAME TO test_result"))
+
+        connection.execute(
+            text("UPDATE dropdown_option SET field_name = 'key_4' WHERE field_name = 'key_3'")
+        )
+        connection.execute(
+            text("UPDATE dropdown_option SET field_name = 'key_3' WHERE field_name = 'key_2'")
+        )
+
+
+def _backfill_form_submissions() -> None:
+    from app.services.form_submission_service import backfill_form_submissions_from_test_results
+
+    session = session_local()
+    try:
+        backfill_form_submissions_from_test_results(session)
+    finally:
+        session.close()
+
+
+def _ensure_ui_sample_profiles() -> None:
+    from app.services.ui_sample_profile_service import ensure_default_ui_sample_profiles
+
+    session = session_local()
+    try:
+        ensure_default_ui_sample_profiles(session)
+    finally:
+        session.close()
+
+
+def _ensure_default_dropdown_options() -> None:
+    from app.services.dropdown_option_service import ensure_default_dropdown_options
+
+    session = session_local()
+    try:
+        ensure_default_dropdown_options(session)
+    finally:
+        session.close()

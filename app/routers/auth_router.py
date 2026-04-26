@@ -6,6 +6,8 @@ import os
 from app.auth import ROLE_ADMIN, ROLE_TESTER, ensure_active_user_limit
 from app.deps import database_session_dependency
 from app.models import UserAccount
+from app.services.dropdown_option_service import list_dropdown_options_for_field
+from app.services.ui_sample_profile_service import list_ui_sample_profiles_map
 
 
 auth_router = APIRouter(tags=["auth"])
@@ -17,12 +19,20 @@ def redirect_root_to_login():
 
 
 @auth_router.get("/login")
-def render_login_page(request: Request):
+def render_login_page(
+    request: Request,
+    database_session: database_session_dependency,
+):
     templates = request.app.state.templates
     return templates.TemplateResponse(
         request=request,
         name="login.html",
-        context={"request": request, "page_title": "Login", "error_message": ""},
+        context={
+            "request": request,
+            "page_title": "Login",
+            "error_message": "",
+            "ui_sample_profiles_map": list_ui_sample_profiles_map(database_session),
+        },
     )
 
 
@@ -52,6 +62,7 @@ def handle_login_submission(
                 "request": request,
                 "page_title": "Login",
                 "error_message": "전화번호 또는 비밀번호가 올바르지 않습니다.",
+                "ui_sample_profiles_map": list_ui_sample_profiles_map(database_session),
             },
             status_code=status.HTTP_400_BAD_REQUEST,
         )
@@ -65,6 +76,7 @@ def handle_login_submission(
                 "request": request,
                 "page_title": "Login",
                 "error_message": "Tester 가입 승인이 아직 완료되지 않았습니다. 관리자 승인 후 로그인해 주세요.",
+                "ui_sample_profiles_map": list_ui_sample_profiles_map(database_session),
             },
             status_code=status.HTTP_400_BAD_REQUEST,
         )
@@ -82,12 +94,29 @@ def handle_login_submission(
 
 
 @auth_router.get("/join")
-def render_join_page(request: Request):
+def render_join_page(
+    request: Request,
+    database_session: database_session_dependency,
+):
+    try:
+        join_company_options = list_dropdown_options_for_field(
+            database_session=database_session,
+            field_name="key_1",
+        )
+    except Exception:
+        join_company_options = []
     templates = request.app.state.templates
     return templates.TemplateResponse(
         request=request,
         name="join.html",
-        context={"request": request, "page_title": "Join", "error_message": "", "success_message": ""},
+        context={
+            "request": request,
+            "page_title": "Join",
+            "error_message": "",
+            "success_message": "",
+            "join_company_options": join_company_options,
+            "ui_sample_profiles_map": list_ui_sample_profiles_map(database_session),
+        },
     )
 
 
@@ -110,6 +139,13 @@ def handle_join_submission(
     existing_user_account = database_session.scalar(
         select(UserAccount).where(UserAccount.phone_number == normalized_phone_number)
     )
+    try:
+        join_company_options = list_dropdown_options_for_field(
+            database_session=database_session,
+            field_name="key_1",
+        )
+    except Exception:
+        join_company_options = []
     if existing_user_account is not None:
         templates = request.app.state.templates
         return templates.TemplateResponse(
@@ -120,6 +156,8 @@ def handle_join_submission(
                 "page_title": "Join",
                 "error_message": "이미 등록된 전화번호입니다.",
                 "success_message": "",
+                "join_company_options": join_company_options,
+                "ui_sample_profiles_map": list_ui_sample_profiles_map(database_session),
             },
             status_code=status.HTTP_400_BAD_REQUEST,
         )
@@ -146,5 +184,15 @@ def handle_join_submission(
             "page_title": "Join",
             "error_message": "",
             "success_message": "회원가입이 완료되었습니다. 로그인해 주세요.",
+            "join_company_options": join_company_options,
+            "ui_sample_profiles_map": list_ui_sample_profiles_map(database_session),
         },
     )
+
+
+@auth_router.post("/logout")
+def handle_logout_submission():
+    response = RedirectResponse(url="/login", status_code=303)
+    response.delete_cookie("role_name")
+    response.delete_cookie("phone_number")
+    return response

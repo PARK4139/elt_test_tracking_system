@@ -12,7 +12,8 @@ class TestResultPartialInput(BaseModel):
     key_1: str
     key_2: str
     key_3: str
-    submission_id: str | None = None
+    key_4: str
+    form_submission_id: str | None = None
     data_writer_name: str | None = None
     is_reviewed: bool | None = None
 
@@ -39,12 +40,13 @@ class TestResultRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    submission_id: str | None
+    form_submission_id: str | None = None
     data_writer_name: str | None
     is_reviewed: bool
     key_1: str
     key_2: str
     key_3: str
+    key_4: str
     field_01: str | None
     field_02: str | None
     field_03: str | None

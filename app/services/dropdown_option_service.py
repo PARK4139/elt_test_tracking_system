@@ -8,10 +8,29 @@ DROPDOWN_FIELD_NAMES = [
     "key_1",
     "key_2",
     "key_3",
+    "key_4",
     "field_01",
     "field_02",
     "field_03",
 ]
+
+DEFAULT_DROPDOWN_OPTIONS: dict[str, list[str]] = {
+    "key_1": [
+        "HUVITZ",
+        "메디테크",
+        "에이원옵틱",
+    ],
+    "key_3": [
+        "HRT-7000",
+        "HRT-8000",
+        "HLM-9000",
+    ],
+    "key_4": [
+        "P-100",
+        "P-200",
+        "P-300",
+    ],
+}
 
 
 def list_dropdown_options_map(database_session: Session) -> dict[str, list[str]]:
@@ -92,3 +111,31 @@ def list_dropdown_options_for_field(database_session: Session, field_name: str) 
         .order_by(DropdownOption.option_value.asc())
     )
     return list(rows)
+
+
+def ensure_default_dropdown_options(database_session: Session) -> None:
+    changed = False
+    for field_name, option_values in DEFAULT_DROPDOWN_OPTIONS.items():
+        if field_name not in DROPDOWN_FIELD_NAMES:
+            continue
+        for option_value in option_values:
+            normalized_option_value = str(option_value or "").strip()
+            if not normalized_option_value:
+                continue
+            existing_row = database_session.scalar(
+                select(DropdownOption).where(
+                    DropdownOption.field_name == field_name,
+                    DropdownOption.option_value == normalized_option_value,
+                )
+            )
+            if existing_row is not None:
+                continue
+            database_session.add(
+                DropdownOption(
+                    field_name=field_name,
+                    option_value=normalized_option_value,
+                )
+            )
+            changed = True
+    if changed:
+        database_session.commit()
