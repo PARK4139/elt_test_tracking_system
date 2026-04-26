@@ -6,19 +6,7 @@
 
 <section class="card">
     <div class="section_header_row">
-        <h3>STEP 1. 양식 발급</h3>
-    </div>
-    <p class="detail_guide">행 값을 입력하면 자동저장 시 양식제출ID가 자동 발급됩니다. 제출 단위를 새로 시작하려면 양식 발급 버튼을 눌러주세요.</p>
-    <input type="hidden" id="tester_form_submission_id_value" value="" autocomplete="off">
-    <div class="section_header_row" style="align-items: center; gap: 1rem; flex-wrap: wrap;">
-        <button id="tester_start_submission_button" type="button" class="project_standard_button">양식 발급</button>
-    </div>
-    <div id="save_validation_notice" class="non_modal_notice" aria-live="polite"></div>
-</section>
-
-<section class="card">
-    <div class="section_header_row">
-        <h3>STEP 2. 양식 작성</h3>
+        <h3>데이터입력</h3>
         <div class="table_action_bar">
             <button id="col_fill_button" type="button" class="qc_mode_action_button">SAMPLE 작성</button>
             <button id="add_row_button" type="button">행 추가</button>
@@ -26,6 +14,9 @@
             <button id="delete_selected_rows_button" type="button">행 삭제</button>
         </div>
     </div>
+    <p class="detail_guide">※주의: 실시간 자동저장</p>
+    <input type="hidden" id="tester_form_submission_id_value" value="" autocomplete="off">
+    <div id="save_validation_notice" class="non_modal_notice" aria-live="polite"></div>
     <script id="tester_dropdown_options_json" type="application/json">{{ dropdown_options_map|tojson }}</script>
     <div class="tester_table_wrap">
         <table id="tester_grid_table" class="basic_table">
@@ -59,7 +50,7 @@
                     <td><input class="row_select_checkbox" type="checkbox"></td>
                     <td class="id_cell hidden_id_column">{{ row.id }}</td>
                     <td>
-                        <span class="submission_id_cell_value delta_value{% if not row.form_submission_id %} is_placeholder{% endif %}">{{ row.form_submission_id or "제출 시작 전" }}</span>
+                        <span class="submission_id_cell_value delta_value{% if not row.form_submission_id %} is_placeholder{% endif %}">{{ row.form_submission_id or "자동계산" }}</span>
                     </td>
                     <td>
                         <input type="hidden" data-field="key_1" value="{{ row.key_1 or current_company_name or '' }}">

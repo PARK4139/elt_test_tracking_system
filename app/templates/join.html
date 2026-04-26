@@ -2,7 +2,7 @@
 {% block content %}
 <section class="card">
     <div class="section_header_row">
-        <h2>업체등록</h2>
+        <div></div>
         {% if qc_mode_enabled %}
         <div class="table_action_bar">
             <button id="fill_join_sample_a_button" type="button" class="qc_mode_action_button">샘플가입양식채우기(A업체)</button>
@@ -13,7 +13,30 @@
         {% endif %}
     </div>
     {% if error_message %}
+    {% if error_message == "이미 등록된 전화번호입니다." %}
+    <script>
+    (() => {
+        const message_text = {{ error_message|tojson }};
+        const try_show_center_non_modal = (attempt_left) => {
+            if (window.showCenterNonModalV2) {
+                window.showCenterNonModalV2(message_text, "error");
+                return;
+            }
+            if (attempt_left <= 0) {
+                return;
+            }
+            window.setTimeout(() => try_show_center_non_modal(attempt_left - 1), 50);
+        };
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", () => try_show_center_non_modal(20), { once: true });
+        } else {
+            try_show_center_non_modal(20);
+        }
+    })();
+    </script>
+    {% else %}
     <div class="non_modal_notice error"><div>{{ error_message }}</div></div>
+    {% endif %}
     {% endif %}
     <form method="post" action="/join" class="form_stack">
         <label for="company_name">업체명</label>
@@ -25,7 +48,7 @@
         <label for="phone_number">전화번호</label>
         <input id="phone_number" name="phone_number" type="text" required>
 
-        <label for="password">Password</label>
+        <label for="password">비밀번호</label>
         <input id="password" name="password" type="password" required>
 
         <button type="submit" class="project_standard_button">가입신청</button>

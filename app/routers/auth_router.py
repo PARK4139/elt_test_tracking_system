@@ -84,7 +84,7 @@ def handle_login_submission(
     ensure_active_user_limit(user_name=normalized_phone_number)
     qc_mode_enabled = os.getenv("QC_MODE", "True").strip().lower() in {"1", "true", "yes", "on"}
     if qc_mode_enabled:
-        redirect_url = "/tester"
+        redirect_url = "/admin" if user_account.role_name == ROLE_ADMIN else "/tester"
     else:
         redirect_url = "/admin" if user_account.role_name == ROLE_ADMIN else "/tester"
     response = RedirectResponse(url=redirect_url, status_code=303)

@@ -29,19 +29,18 @@
                 {% elif request.url.path.startswith('/tester') %}
                 ELT 시험 데이터 입력 시스템
                 {% elif request.url.path.startswith('/login') %}
-                ELT Room 시험시간 소요 데이터 관리 시스템 업체로그인
+                ELT Room 시험시간 소요 데이터 관리 시스템 로그인
                 {% elif request.url.path.startswith('/join') %}
                 ELT Room 시험시간 소요 데이터 관리 시스템 업체등록
                 {% else %}
                 ELT Room 시험시간 소요 데이터 관리 시스템
                 {% endif %}
             </h1>
-            <a
-                class="qc_mode_button"
-                href="{% if not qc_mode_enabled %}/login{% elif request.url.path.startswith('/admin') %}/tester{% else %}/admin{% endif %}"
-            >
-                QC MODE
-            </a>
+            <div class="qc_header_actions">
+                <a class="qc_mode_button" href="/login">
+                    로그인페이지로 이동
+                </a>
+            </div>
         </div>
     </header>
     <main class="page_container">

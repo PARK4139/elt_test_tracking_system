@@ -2,7 +2,7 @@
 {% block content %}
 <section class="card">
     <div class="section_header_row">
-        <h2>업체로그인</h2>
+        <div></div>
         {% if qc_mode_enabled %}
         <div class="table_action_bar">
             <button id="fill_login_sample_a_button" type="button" class="qc_mode_action_button">샘플로그인양식채우기(A업체)</button>
@@ -22,14 +22,11 @@
         <label for="password">비밀번호</label>
         <input id="password" name="password" type="password" required>
 
-        <button type="submit" class="project_standard_button">업체로그인</button>
+        <button type="submit" class="project_standard_button">로그인</button>
     </form>
 </section>
 
 <section class="card">
-    <div class="section_header_row">
-        <h2>선택기능</h2>
-    </div>
     <div class="table_action_bar">
         <a href="/join" class="project_standard_button">업체등록페이지로 이동</a>
     </div>

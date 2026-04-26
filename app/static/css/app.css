@@ -73,6 +73,29 @@ body {
     font-size: 12px;
 }
 
+.qc_header_actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.qc_mode_chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 29px;
+    padding: 4px 10px;
+    border: 1px solid #C84D9B;
+    border-radius: 999px;
+    color: #8A2B67;
+    background: #FFEAF6;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 12px;
+    line-height: 1;
+    white-space: nowrap;
+}
+
 .qc_mode_action_button {
     border: 1px solid #C84D9B;
     color: #8A2B67;
@@ -222,6 +245,23 @@ button:disabled {
     border: 1px solid var(--color_border);
     padding: 8px;
     text-align: left;
+}
+
+.basic_table th {
+    position: relative;
+    text-align: center;
+}
+
+.basic_table .column_resize_handle {
+    position: absolute;
+    top: 0;
+    right: -5px;
+    width: 10px;
+    height: 100%;
+    cursor: col-resize;
+    user-select: none;
+    touch-action: none;
+    z-index: 3;
 }
 
 #tester_grid_table input[data-field] {
@@ -393,6 +433,21 @@ button:disabled {
     flex-wrap: wrap;
 }
 
+.basic_table td .table_action_bar {
+    justify-content: center;
+    align-items: center;
+}
+
+.basic_table td:has(button),
+.basic_table td:has(a.project_standard_button) {
+    text-align: center;
+}
+
+.basic_table td > form:has(button) {
+    display: inline-block;
+    margin: 0 auto;
+}
+
 .admin_feature_menu {
     display: flex;
     flex-direction: column;
@@ -526,6 +581,64 @@ button:disabled {
 .message_modal_success #app_message_modal_title,
 .message_modal_success #app_message_modal_body {
     color: #205D35;
+}
+
+.green_non_modal_v2 {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2000;
+    display: none;
+    min-width: 260px;
+    max-width: 90vw;
+    padding: 12px 18px;
+    border: 1px solid #A8CBB5;
+    border-radius: 8px;
+    background: #EAF7EF;
+    color: #205D35;
+    text-align: center;
+    font-weight: 700;
+    box-shadow: 0 8px 24px rgba(12, 58, 70, 0.18);
+}
+
+.green_non_modal_v2.is_open {
+    display: block;
+}
+
+.center_non_modal_v2 {
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 2100;
+    display: none;
+    min-width: 260px;
+    max-width: 90vw;
+    padding: 12px 18px;
+    border: 1px solid #D6E2E8;
+    border-radius: 8px;
+    background: #F6FBFD;
+    color: #0C3A46;
+    text-align: center;
+    font-weight: 700;
+    box-shadow: 0 8px 24px rgba(12, 58, 70, 0.18);
+}
+
+.center_non_modal_v2.error {
+    border-color: #D0A3A3;
+    background: #FAEAEA;
+    color: #7A1E1E;
+}
+
+.center_non_modal_v2.success {
+    border-color: #A8CBB5;
+    background: #EAF7EF;
+    color: #205D35;
+}
+
+.center_non_modal_v2.is_open {
+    display: block;
 }
 
 /* Global scrollbar thickness up */

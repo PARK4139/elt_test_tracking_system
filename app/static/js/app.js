@@ -72,6 +72,308 @@
     };
 
     window.openMessageModal = openMessageModal;
+    let global_green_non_modal_timer = null;
+    window.showGreenNonModalV2 = (message_text) => {
+        let toast = document.getElementById("green_non_modal_v2");
+        if (!toast) {
+            toast = document.createElement("div");
+            toast.id = "green_non_modal_v2";
+            toast.className = "green_non_modal_v2";
+            document.body.appendChild(toast);
+        }
+        toast.textContent = String(message_text || "");
+        toast.classList.add("is_open");
+        if (global_green_non_modal_timer) {
+            clearTimeout(global_green_non_modal_timer);
+        }
+        global_green_non_modal_timer = setTimeout(() => {
+            toast.classList.remove("is_open");
+            global_green_non_modal_timer = null;
+        }, 1400);
+    };
+    let center_non_modal_v2_timer = null;
+    window.showCenterNonModalV2 = (message_text, type_name = "info") => {
+        let toast = document.getElementById("center_non_modal_v2");
+        if (!toast) {
+            toast = document.createElement("div");
+            toast.id = "center_non_modal_v2";
+            toast.className = "center_non_modal_v2";
+            document.body.appendChild(toast);
+        }
+        const normalized_type = String(type_name || "info").toLowerCase();
+        toast.classList.remove("success", "error", "info");
+        toast.classList.add(normalized_type);
+        toast.textContent = String(message_text || "");
+        toast.classList.add("is_open");
+        if (center_non_modal_v2_timer) {
+            clearTimeout(center_non_modal_v2_timer);
+        }
+        center_non_modal_v2_timer = setTimeout(() => {
+            toast.classList.remove("is_open");
+            center_non_modal_v2_timer = null;
+        }, 1600);
+    };
+    window.showBlueNonModalV2 = (message_text) => {
+        window.showCenterNonModalV2(message_text, "info");
+    };
+
+    const init_resizable_basic_tables = () => {
+        const all_basic_tables = Array.from(document.querySelectorAll("table.basic_table"));
+        if (all_basic_tables.length === 0) {
+            return;
+        }
+
+        all_basic_tables.forEach((table_element, table_index) => {
+            if (!(table_element instanceof HTMLTableElement)) {
+                return;
+            }
+            if (table_element.id === "admin_grid_table") {
+                return;
+            }
+            if (table_element.dataset.resizableInitDone === "1") {
+                return;
+            }
+            table_element.dataset.resizableInitDone = "1";
+
+            const header_cells = Array.from(table_element.querySelectorAll("thead th"));
+            if (header_cells.length === 0) {
+                return;
+            }
+
+            const table_key = table_element.id
+                ? `id:${table_element.id}`
+                : `idx:${table_index}`;
+            const storage_key = `basic_table_col_widths_v1:${window.location.pathname}:${table_key}`;
+            let saved_widths = {};
+            try {
+                saved_widths = JSON.parse(localStorage.getItem(storage_key) || "{}");
+            } catch (_error) {
+                saved_widths = {};
+            }
+
+            let active_header_cell = null;
+            let active_header_index = -1;
+            const column_resize_min_width = 8;
+            let active_min_width = column_resize_min_width;
+            let start_x = 0;
+            let start_width = 0;
+
+            const measure_canvas = document.createElement("canvas");
+            const measure_context = measure_canvas.getContext("2d");
+            const measure_text_width = (text) => {
+                const normalized = String(text || "").trim();
+                if (!measure_context) {
+                    return Math.max(column_resize_min_width, normalized.length * 10 + 16);
+                }
+                const table_style = getComputedStyle(table_element);
+                measure_context.font =
+                    table_style.font || `${table_style.fontWeight} ${table_style.fontSize} ${table_style.fontFamily}`;
+                return Math.max(column_resize_min_width, Math.ceil(measure_context.measureText(normalized).width) + 14);
+            };
+
+            const save_widths = () => {
+                const payload = {};
+                header_cells.forEach((header_cell, index) => {
+                    if (!(header_cell instanceof HTMLElement)) {
+                        return;
+                    }
+                    if (header_cell.classList.contains("hidden_id_column") || header_cell.classList.contains("hidden_audit_column")) {
+                        return;
+                    }
+                    const width_value = Math.ceil(header_cell.getBoundingClientRect().width);
+                    if (width_value > 0) {
+                        payload[String(index)] = width_value;
+                    }
+                });
+                try {
+                    localStorage.setItem(storage_key, JSON.stringify(payload));
+                } catch (_error) {
+                    // ignore storage errors
+                }
+            };
+
+            const on_mouse_move = (event) => {
+                if (!active_header_cell) {
+                    return;
+                }
+                const delta_x = event.clientX - start_x;
+                const next_width = Math.max(active_min_width, Math.ceil(start_width + delta_x));
+                active_header_cell.style.width = `${next_width}px`;
+                active_header_cell.style.minWidth = `${next_width}px`;
+            };
+
+            const on_mouse_up = () => {
+                active_header_cell = null;
+                active_header_index = -1;
+                document.body.style.cursor = "";
+                document.body.style.userSelect = "";
+                window.removeEventListener("mousemove", on_mouse_move);
+                window.removeEventListener("mouseup", on_mouse_up);
+                save_widths();
+            };
+
+            header_cells.forEach((header_cell, index) => {
+                if (!(header_cell instanceof HTMLElement)) {
+                    return;
+                }
+                if (header_cell.classList.contains("hidden_id_column") || header_cell.classList.contains("hidden_audit_column")) {
+                    return;
+                }
+
+                const text_min_width = measure_text_width(header_cell.textContent || "");
+                const saved_width = Number(saved_widths[String(index)] || 0);
+                const base_width = Math.ceil(header_cell.getBoundingClientRect().width || 0);
+                const apply_width = Math.max(
+                    column_resize_min_width,
+                    saved_width || base_width || text_min_width
+                );
+                header_cell.style.width = `${apply_width}px`;
+                header_cell.style.minWidth = `${apply_width}px`;
+
+                if (header_cell.querySelector(".column_resize_handle")) {
+                    return;
+                }
+                const handle = document.createElement("span");
+                handle.className = "column_resize_handle";
+                handle.addEventListener("mousedown", (event) => {
+                    event.preventDefault();
+                    active_header_cell = header_cell;
+                    active_header_index = index;
+                    active_min_width = column_resize_min_width;
+                    start_x = event.clientX;
+                    start_width = header_cell.getBoundingClientRect().width;
+                    document.body.style.cursor = "col-resize";
+                    document.body.style.userSelect = "none";
+                    window.addEventListener("mousemove", on_mouse_move);
+                    window.addEventListener("mouseup", on_mouse_up);
+                });
+                header_cell.appendChild(handle);
+            });
+        });
+    };
+    init_resizable_basic_tables();
+
+    const init_scroll_position_persistence = () => {
+        const storage_key = `scroll_positions_v1:${window.location.pathname}`;
+        let saved_positions = {};
+        try {
+            saved_positions = JSON.parse(localStorage.getItem(storage_key) || "{}");
+        } catch (_error) {
+            saved_positions = {};
+        }
+
+        const collect_scroll_targets = () => {
+            const targets = [];
+            const scrolling_root =
+                document.scrollingElement || document.documentElement || document.body;
+            if (scrolling_root) {
+                targets.push(scrolling_root);
+            }
+            const all_elements = document.querySelectorAll("*");
+            for (const element of all_elements) {
+                if (!(element instanceof HTMLElement)) {
+                    continue;
+                }
+                if (element === document.body || element === document.documentElement) {
+                    continue;
+                }
+                const can_scroll_x = element.scrollWidth > element.clientWidth + 1;
+                const can_scroll_y = element.scrollHeight > element.clientHeight + 1;
+                if (can_scroll_x || can_scroll_y) {
+                    targets.push(element);
+                }
+            }
+            return targets;
+        };
+
+        const get_target_key = (target, index) => {
+            const scrolling_root =
+                document.scrollingElement || document.documentElement || document.body;
+            if (target === scrolling_root) {
+                return "__window__";
+            }
+            const id_value = String(target.id || "").trim();
+            if (id_value) {
+                return `id:${id_value}`;
+            }
+            return `idx:${index}:${target.tagName.toLowerCase()}`;
+        };
+
+        const restore_positions = () => {
+            const targets = collect_scroll_targets();
+            targets.forEach((target, index) => {
+                const key = get_target_key(target, index);
+                const position = saved_positions[key];
+                if (!position) {
+                    return;
+                }
+                const left = Number(position.left || 0);
+                const top = Number(position.top || 0);
+                if (key === "__window__") {
+                    window.scrollTo(left, top);
+                    return;
+                }
+                target.scrollLeft = left;
+                target.scrollTop = top;
+            });
+        };
+
+        let save_timer = null;
+        const save_positions = () => {
+            const next_positions = {};
+            const targets = collect_scroll_targets();
+            targets.forEach((target, index) => {
+                const key = get_target_key(target, index);
+                const left = Math.max(0, Math.floor(target.scrollLeft || 0));
+                const top = Math.max(0, Math.floor(target.scrollTop || 0));
+                if (!left && !top) {
+                    return;
+                }
+                next_positions[key] = { left, top };
+            });
+            try {
+                localStorage.setItem(storage_key, JSON.stringify(next_positions));
+                saved_positions = next_positions;
+            } catch (_error) {
+                // ignore storage errors
+            }
+        };
+
+        const queue_save = () => {
+            if (save_timer) {
+                clearTimeout(save_timer);
+            }
+            save_timer = setTimeout(() => {
+                save_timer = null;
+                save_positions();
+            }, 120);
+        };
+
+        window.addEventListener("scroll", queue_save, { passive: true });
+        document.addEventListener(
+            "scroll",
+            (event) => {
+                if (event.target instanceof HTMLElement) {
+                    queue_save();
+                }
+            },
+            true
+        );
+        window.addEventListener("beforeunload", save_positions);
+
+        const restore_with_stabilization = () => {
+            restore_positions();
+            requestAnimationFrame(() => restore_positions());
+            setTimeout(() => restore_positions(), 260);
+        };
+
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", restore_with_stabilization, { once: true });
+        } else {
+            restore_with_stabilization();
+        }
+    };
+    init_scroll_position_persistence();
 
     const tester_grid_body = document.getElementById("tester_grid_body");
     const col_fill_button = document.getElementById("col_fill_button");
@@ -103,7 +405,7 @@
 
     const is_placeholder_submission_text = (text) => {
         const value = (text || "").trim();
-        return !value || value === "자동계산" || value === "제출 시작 전";
+        return !value || value === "자동계산" || value === "양식 재발급 필요";
     };
 
     const getActiveFormSubmissionId = () => {
@@ -298,7 +600,7 @@
         };
 
         const active_sid = getActiveFormSubmissionId();
-        const sub_text = active_sid || "제출 시작 전";
+        const sub_text = active_sid || "자동계산";
         const sub_is_placeholder = !active_sid;
 
         const row_element = document.createElement("tr");
@@ -361,6 +663,21 @@
                 month_select.appendChild(month_option);
             }
             month_select.value = current_month_value;
+        }
+
+        const count_select = row_element.querySelector('select[data-field="field_02"]');
+        if (count_select) {
+            const default_count_value = "1";
+            const has_count_option = Array.from(count_select.options).some(
+                (option) => String(option.value || "").trim() === default_count_value
+            );
+            if (!has_count_option) {
+                const count_option = document.createElement("option");
+                count_option.value = default_count_value;
+                count_option.textContent = default_count_value;
+                count_select.appendChild(count_option);
+            }
+            count_select.value = default_count_value;
         }
         return row_element;
     };
@@ -634,7 +951,10 @@
         }
         const allow_edit = hasContext && !is_submission_submitted;
         if (tester_submit_submission_button) tester_submit_submission_button.disabled = !allow_edit;
-        for (const el of [col_fill_button, add_row_button, select_all_rows_button, delete_selected_rows_button]) {
+        if (add_row_button) {
+            add_row_button.disabled = !!is_submission_submitted;
+        }
+        for (const el of [col_fill_button, select_all_rows_button, delete_selected_rows_button]) {
             if (el) {
                 el.disabled = !allow_edit;
             }
@@ -698,7 +1018,10 @@
         }
         auto_save_in_progress = true;
         try {
-            await save_all_rows_now(false);
+            const save_ok = await save_all_rows_now(false);
+            if (save_ok) {
+                window.showGreenNonModalV2("자동저장 되었습니다.");
+            }
         } finally {
             auto_save_in_progress = false;
             if (auto_save_requested_again) {
@@ -732,6 +1055,27 @@
                 return `${index + 1}번(${field_label_map[field_name]})`;
             })
             .filter(Boolean);
+
+    const has_any_user_entered_value = (row_element) => {
+        for (const field_name of ["key_3", "key_4", ...field_names]) {
+            const field_element = row_element.querySelector(`[data-field="${field_name}"]`);
+            const value = field_element && "value" in field_element ? (field_element.value || "").trim() : "";
+            if (value) {
+                return true;
+            }
+        }
+        for (const field of time_field_definitions) {
+            const input_element = row_element.querySelector(field.selector);
+            if (!input_element) {
+                continue;
+            }
+            const value = (input_element.value || "").trim();
+            if (value) {
+                return true;
+            }
+        }
+        return false;
+    };
 
     if (col_fill_button) {
         col_fill_button.addEventListener("click", () => {
@@ -895,7 +1239,6 @@
             tester_grid_body.appendChild(row_element);
             bind_compact_width_behavior(row_element);
             bind_row_actions(row_element);
-            queueAutoSave();
         });
     }
 
@@ -1036,6 +1379,17 @@
 
     const save_all_rows_now = async (show_success_modal = false) => {
         const editable_rows = list_editable_rows();
+        const has_any_row_input = editable_rows.some((row_element) =>
+            has_any_user_entered_value(row_element)
+        );
+        let active_submission_id = getActiveFormSubmissionId();
+        if (!active_submission_id && has_any_row_input) {
+            active_submission_id = await create_submission_id_if_missing(false);
+            if (!active_submission_id) {
+                return false;
+            }
+        }
+
         const validation_messages = [];
         for (let index = 0; index < editable_rows.length; index += 1) {
             const row_element = editable_rows[index];
@@ -1054,20 +1408,18 @@
         for (let index = 0; index < editable_rows.length; index += 1) {
             const missing_columns = get_missing_column_descriptions(editable_rows[index]);
             if (missing_columns.length > 0) {
-                validation_messages.push(`${index + 1}행: ${missing_columns.join(", ")} 미입력`);
+                validation_messages.push(`${index + 1}행: ${missing_columns.join(", ")} 입력을 완료해 주세요.`);
             }
         }
 
         if (validation_messages.length > 0) {
-            return false;
-        }
-
-        let active_submission_id = getActiveFormSubmissionId();
-        if (!active_submission_id) {
-            active_submission_id = await create_submission_id_if_missing(false);
-            if (!active_submission_id) {
-                return false;
+            clear_non_modal_notice();
+            if (window.showBlueNonModalV2) {
+                window.showBlueNonModalV2(`자동저장 안내: ${validation_messages[0]}`);
+            } else if (window.showCenterNonModalV2) {
+                window.showCenterNonModalV2(`자동저장 안내: ${validation_messages[0]}`, "info");
             }
+            return false;
         }
 
         const rows_payload = [];

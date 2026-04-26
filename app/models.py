@@ -46,6 +46,7 @@ class UserAccount(Base):
     phone_number: Mapped[str | None] = mapped_column(Text, unique=True, nullable=True)
     company_name: Mapped[str | None] = mapped_column(Text, nullable=True)
     department_name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    internal_title: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_approved: Mapped[bool] = mapped_column(nullable=False, default=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

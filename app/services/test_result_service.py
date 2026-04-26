@@ -242,3 +242,16 @@ def mark_test_results_review_complete_by_ids(database_session: Session, row_ids:
     )
     database_session.commit()
     return int(result.rowcount or 0)
+
+
+def mark_test_results_review_pending_by_ids(database_session: Session, row_ids: list[int]) -> int:
+    normalized_row_ids = sorted({int(row_id) for row_id in row_ids if int(row_id) > 0})
+    if not normalized_row_ids:
+        return 0
+    result = database_session.execute(
+        update(TestResult)
+        .where(TestResult.id.in_(normalized_row_ids))
+        .values(is_reviewed=False)
+    )
+    database_session.commit()
+    return int(result.rowcount or 0)

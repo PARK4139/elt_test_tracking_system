@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="card">
-    <h3>OO부서 OOO프로 님, 안녕하세요.</h3>
+    <h3>{{ admin_greeting_text }}</h3>
 </section>
 <section class="card">
     <div class="section_header_row">
@@ -21,10 +21,11 @@
             {% endif %}
             <button type="button" class="admin_feature_filter_button" data-feature-target="tracking">OPTION 1. 데이터 입력승인</button>
             <button type="button" class="admin_feature_filter_button" data-feature-target="create_admin">OPTION 2. 관리자 등록</button>
-            <button type="button" class="admin_feature_filter_button" data-feature-target="create_tester">OPTION 3. 업체 등록</button>
-            <button type="button" class="admin_feature_filter_button" data-feature-target="approve_join">OPTION 4. 업체 등록 관리</button>
-            <button type="button" class="admin_feature_filter_button" data-feature-target="dropdown_add">OPTION 5. 드롭다운 항목 추가</button>
-            <button type="button" class="admin_feature_filter_button" data-feature-target="dropdown_delete">OPTION 6. 드롭다운 항목 삭제</button>
+            <button type="button" class="admin_feature_filter_button" data-feature-target="admin_manage">OPTION 3. 관리자 등록 관리</button>
+            <button type="button" class="admin_feature_filter_button" data-feature-target="create_tester">OPTION 4. 업체 등록</button>
+            <button type="button" class="admin_feature_filter_button" data-feature-target="approve_join">OPTION 5. 업체 등록 관리</button>
+            <button type="button" class="admin_feature_filter_button" data-feature-target="dropdown_add">OPTION 6. 드롭다운 항목 추가</button>
+            <button type="button" class="admin_feature_filter_button" data-feature-target="dropdown_delete">OPTION 7. 드롭다운 항목 삭제</button>
         </div>
     </div>
 </div>
@@ -33,11 +34,11 @@
     <div class="section_header_row">
         <h3>데이터 입력승인</h3>
         <div class="table_action_bar">
-            <a href="/admin/export/xlsx" class="project_standard_button">엑셀 내보내기</a>
-            <button id="admin_append_excel_button" type="button" class="project_standard_button">기존엑셀 데이터 추가</button>
             <button id="admin_select_all_rows_button" type="button" class="qc_mode_action_button">전체 행 선택</button>
             <button id="admin_mark_review_complete_button" type="button">선택한 행 검토완료</button>
             <button id="admin_delete_selected_rows_button" type="button">선택 행 삭제</button>
+            <a href="/admin/export/xlsx" class="project_standard_button">엑셀 내보내기</a>
+            <button id="admin_append_excel_button" type="button" class="project_standard_button">기존엑셀 데이터 추가</button>
         </div>
     </div>
     {% if qc_mode_enabled %}
@@ -90,7 +91,25 @@
                     <td><input data-field="high_test_delta" value="{{ row.high_test_delta or '' }}"></td>
                     <td class="hidden_audit_column">{{ row.created_at }}</td>
                     <td class="hidden_audit_column">{{ row.updated_at }}</td>
-                    <td class="review_status_cell">{{ "승인" if row.is_reviewed else "미승인" }}</td>
+                    <td class="review_status_cell">
+                        <div class="table_action_bar">
+                            {% if row.is_reviewed %}
+                            <button
+                                type="button"
+                                class="admin_single_review_toggle_button"
+                                data-row-id="{{ row.id }}"
+                                data-next-reviewed="0"
+                            >입력승인 삭제</button>
+                            {% else %}
+                            <button
+                                type="button"
+                                class="admin_single_review_toggle_button"
+                                data-row-id="{{ row.id }}"
+                                data-next-reviewed="1"
+                            >입력승인</button>
+                            {% endif %}
+                        </div>
+                    </td>
                 </tr>
                 {% else %}
                 <tr class="admin_readonly_row" data-id="{{ row.id }}" data-submission-id="{{ row.form_submission_id or '' }}">
@@ -111,7 +130,25 @@
                     <td>{{ row.high_test_delta or "" }}</td>
                     <td class="hidden_audit_column">{{ row.created_at }}</td>
                     <td class="hidden_audit_column">{{ row.updated_at }}</td>
-                    <td class="review_status_cell">{{ "승인" if row.is_reviewed else "미승인" }}</td>
+                    <td class="review_status_cell">
+                        <div class="table_action_bar">
+                            {% if row.is_reviewed %}
+                            <button
+                                type="button"
+                                class="admin_single_review_toggle_button"
+                                data-row-id="{{ row.id }}"
+                                data-next-reviewed="0"
+                            >입력승인 삭제</button>
+                            {% else %}
+                            <button
+                                type="button"
+                                class="admin_single_review_toggle_button"
+                                data-row-id="{{ row.id }}"
+                                data-next-reviewed="1"
+                            >입력승인</button>
+                            {% endif %}
+                        </div>
+                    </td>
                 </tr>
                 {% endif %}
                 {% else %}
@@ -145,8 +182,9 @@
     if (!admin_grid_table) {
         return;
     }
+    const admin_column_width_storage_key = "admin_grid_column_widths_v1";
     const header_cells = Array.from(admin_grid_table.querySelectorAll("thead th"));
-    const resize_min_width = 24;
+    const resize_min_width = 8;
     let active_header_cell = null;
     let active_min_width = resize_min_width;
     let start_x = 0;
@@ -157,6 +195,10 @@
     const input_fill_ratio = 0.9;
     const text_inner_padding = 8;
     const cell_horizontal_padding = 8;
+    const active_header_cells = header_cells.filter((header_cell) =>
+        !header_cell.classList.contains("hidden_id_column") &&
+        !header_cell.classList.contains("hidden_audit_column")
+    );
 
     const measure_text_width = (text) => {
         const normalized_text = String(text || "");
@@ -171,6 +213,17 @@
     const get_header_min_width = (header_cell) => {
         const header_label = String(header_cell.textContent || "").trim();
         return Math.max(resize_min_width, measure_text_width(header_label));
+    };
+    const get_header_storage_key = (header_cell, column_index) => {
+        const explicit_key = String(header_cell.dataset.columnKey || "").trim();
+        if (explicit_key) {
+            return explicit_key;
+        }
+        const label_text = String(header_cell.textContent || "").trim();
+        if (label_text) {
+            return label_text;
+        }
+        return `column_${column_index}`;
     };
 
     const get_cell_preferred_width = (cell) => {
@@ -207,6 +260,43 @@
             header_cell.style.minWidth = `${next_width}px`;
         });
     };
+    const save_column_widths = () => {
+        const payload = {};
+        active_header_cells.forEach((header_cell, column_index) => {
+            const storage_key = get_header_storage_key(header_cell, column_index);
+            const width_value = Math.ceil(header_cell.getBoundingClientRect().width);
+            payload[storage_key] = width_value;
+        });
+        try {
+            localStorage.setItem(admin_column_width_storage_key, JSON.stringify(payload));
+        } catch (_error) {
+        }
+    };
+    const apply_saved_column_widths = () => {
+        let parsed = null;
+        try {
+            parsed = JSON.parse(localStorage.getItem(admin_column_width_storage_key) || "{}");
+        } catch (_error) {
+            parsed = null;
+        }
+        if (!parsed || typeof parsed !== "object") {
+            return false;
+        }
+        let applied = false;
+        active_header_cells.forEach((header_cell, column_index) => {
+            const storage_key = get_header_storage_key(header_cell, column_index);
+            const saved_width = Number(parsed[storage_key]);
+            if (!Number.isFinite(saved_width) || saved_width <= 0) {
+                return;
+            }
+            const min_width = resize_min_width;
+            const next_width = Math.max(min_width, Math.ceil(saved_width));
+            header_cell.style.width = `${next_width}px`;
+            header_cell.style.minWidth = `${next_width}px`;
+            applied = true;
+        });
+        return applied;
+    };
 
     const on_mouse_move = (event) => {
         if (!active_header_cell) {
@@ -224,18 +314,21 @@
         document.body.style.userSelect = "";
         window.removeEventListener("mousemove", on_mouse_move);
         window.removeEventListener("mouseup", on_mouse_up);
+        save_column_widths();
     };
 
     header_cells.forEach((header_cell) => {
         if (header_cell.classList.contains("hidden_id_column") || header_cell.classList.contains("hidden_audit_column")) {
             return;
         }
+        const header_label_text = String(header_cell.textContent || "").trim();
+        header_cell.dataset.columnKey = header_label_text || header_cell.dataset.columnKey || "";
         const handle = document.createElement("span");
         handle.className = "column_resize_handle";
         handle.addEventListener("mousedown", (event) => {
             event.preventDefault();
             active_header_cell = header_cell;
-            active_min_width = get_header_min_width(header_cell);
+            active_min_width = resize_min_width;
             start_x = event.clientX;
             start_width = header_cell.getBoundingClientRect().width;
             document.body.style.cursor = "col-resize";
@@ -245,7 +338,10 @@
         });
         header_cell.appendChild(handle);
     });
-    apply_auto_fit_column_widths();
+    if (!apply_saved_column_widths()) {
+        apply_auto_fit_column_widths();
+        save_column_widths();
+    }
 })();
 </script>
 <script>
@@ -531,6 +627,40 @@
         }
     });
 
+    document.querySelectorAll(".admin_single_review_toggle_button").forEach((button) => {
+        button.addEventListener("click", async () => {
+            const row_id = Number(button.dataset.rowId || 0);
+            const next_reviewed = String(button.dataset.nextReviewed || "1") === "1";
+            if (!Number.isInteger(row_id) || row_id <= 0) {
+                if (window.openMessageModal) {
+                    window.openMessageModal("유효한 행 ID가 아닙니다.");
+                }
+                return;
+            }
+            try {
+                const response = await fetch(
+                    next_reviewed ? "/admin/rows/review_complete" : "/admin/rows/review_pending",
+                    {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ row_ids: [row_id] }),
+                    }
+                );
+                if (!response.ok) {
+                    if (window.openMessageModal) {
+                        window.openMessageModal(await read_error_detail(response));
+                    }
+                    return;
+                }
+                window.location.reload();
+            } catch (_error) {
+                if (window.openMessageModal) {
+                    window.openMessageModal("입력승인 처리 중 네트워크 오류가 발생했습니다.");
+                }
+            }
+        });
+    });
+
     delete_button.addEventListener("click", async () => {
         const delete_row_ids = collect_selected_row_ids();
         if (delete_row_ids.length === 0) {
@@ -592,27 +722,111 @@
 </script>
 <section class="card" data-admin-feature-session="create_admin" style="display:none;">
     <h3>관리자 등록</h3>
-    {% if admin_create_success_message %}
+{% if admin_create_success_message %}
     <div class="non_modal_notice success"><div>{{ admin_create_success_message }}</div></div>
-    {% endif %}
+    <script>
+    (() => {
+        if (window.showGreenNonModalV2) {
+            window.showGreenNonModalV2("관리자 등록이 완료되었습니다.");
+        }
+    })();
+    </script>
+{% endif %}
     {% if admin_create_error_message %}
+    {% if admin_create_error_message == "이미 등록된 전화번호입니다." %}
+    <script>
+    (() => {
+        const message_text = {{ admin_create_error_message|tojson }};
+        const try_show_center_non_modal = (attempt_left) => {
+            if (window.showCenterNonModalV2) {
+                window.showCenterNonModalV2(message_text, "error");
+                return;
+            }
+            if (attempt_left <= 0) {
+                return;
+            }
+            window.setTimeout(() => try_show_center_non_modal(attempt_left - 1), 50);
+        };
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", () => try_show_center_non_modal(20), { once: true });
+        } else {
+            try_show_center_non_modal(20);
+        }
+    })();
+    </script>
+    {% else %}
     <div class="non_modal_notice error"><div>{{ admin_create_error_message }}</div></div>
     {% endif %}
-    <form method="post" action="/admin/create_admin" class="form_stack">
-        <label for="admin_department_name">부서</label>
-        <input id="admin_department_name" name="department_name" type="text" required>
-
-        <label for="admin_display_name">양식제출자</label>
-        <input id="admin_display_name" name="display_name" type="text" required>
-
-        <label for="admin_phone_number">전화번호</label>
-        <input id="admin_phone_number" name="phone_number" type="text" required>
-
-        <label for="admin_password">Password</label>
-        <input id="admin_password" name="password" type="password" required>
-
-        <button type="submit" class="project_standard_button">가입하기</button>
+    {% endif %}
+    <form method="post" action="/admin/create_admin">
+        <div class="tester_table_wrap">
+            <table class="basic_table">
+                <thead>
+                    <tr>
+                        <th>부서</th>
+                        <th>양식제출자</th>
+                        <th>사내호칭</th>
+                        <th>전화번호</th>
+                        <th>비밀번호</th>
+                        <th>처리</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input id="admin_department_name" name="department_name" type="text" required></td>
+                        <td><input id="admin_display_name" name="display_name" type="text" required></td>
+                        <td>
+                            <select id="admin_internal_title" name="internal_title" required>
+                                <option value="프로">프로</option>
+                                <option value="사원">사원</option>
+                            </select>
+                        </td>
+                        <td><input id="admin_phone_number" name="phone_number" type="text" required></td>
+                        <td><input id="admin_password" name="password" type="password" required></td>
+                        <td><button type="submit" class="project_standard_button">가입하기</button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </form>
+</section>
+<section class="card" data-admin-feature-session="admin_manage" style="display:none;">
+    <h3>관리자 등록 관리</h3>
+    <div class="tester_table_wrap">
+        <table class="basic_table">
+            <thead>
+                <tr>
+                    <th>부서</th>
+                    <th>양식제출자</th>
+                    <th>사내호칭</th>
+                    <th>전화번호</th>
+                    <th>등록 시각</th>
+                    <th>처리</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in (admin_accounts_for_management or []) %}
+                <tr>
+                    <td>{{ user.department_name or "" }}</td>
+                    <td>{{ user.display_name or "" }}</td>
+                    <td>{{ user.internal_title or "" }}</td>
+                    <td>{{ user.phone_number or "" }}</td>
+                    <td>{{ user.created_at }}</td>
+                    <td>
+                        <form method="post" action="/admin/delete_admin_user">
+                            <input type="hidden" name="user_account_id" value="{{ user.id }}">
+                            <button type="submit">관리자 등록 삭제</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6">등록된 관리자 계정이 없습니다.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 </section>
 <section class="card" data-admin-feature-session="create_tester" style="display:none;">
     <h3>업체 등록</h3>
@@ -620,22 +834,54 @@
     <div class="non_modal_notice success"><div>{{ tester_create_success_message }}</div></div>
     {% endif %}
     {% if tester_create_error_message %}
+    {% if tester_create_error_message == "이미 등록된 전화번호입니다." %}
+    <script>
+    (() => {
+        const message_text = {{ tester_create_error_message|tojson }};
+        const try_show_center_non_modal = (attempt_left) => {
+            if (window.showCenterNonModalV2) {
+                window.showCenterNonModalV2(message_text, "error");
+                return;
+            }
+            if (attempt_left <= 0) {
+                return;
+            }
+            window.setTimeout(() => try_show_center_non_modal(attempt_left - 1), 50);
+        };
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", () => try_show_center_non_modal(20), { once: true });
+        } else {
+            try_show_center_non_modal(20);
+        }
+    })();
+    </script>
+    {% else %}
     <div class="non_modal_notice error"><div>{{ tester_create_error_message }}</div></div>
     {% endif %}
-    <form method="post" action="/admin/create_tester" class="form_stack">
-        <label for="admin_join_company_name">업체명</label>
-        <input id="admin_join_company_name" name="company_name" type="text" required>
-
-        <label for="admin_join_display_name">양식제출자</label>
-        <input id="admin_join_display_name" name="display_name" type="text" required>
-
-        <label for="admin_join_phone_number">전화번호</label>
-        <input id="admin_join_phone_number" name="phone_number" type="text" required>
-
-        <label for="admin_join_password">Password</label>
-        <input id="admin_join_password" name="password" type="password" required>
-
-        <button type="submit" class="project_standard_button">가입하기</button>
+    {% endif %}
+    <form method="post" action="/admin/create_tester">
+        <div class="tester_table_wrap">
+            <table class="basic_table">
+                <thead>
+                    <tr>
+                        <th>업체명</th>
+                        <th>양식제출자</th>
+                        <th>전화번호</th>
+                        <th>비밀번호</th>
+                        <th>처리</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input id="admin_join_company_name" name="company_name" type="text" required></td>
+                        <td><input id="admin_join_display_name" name="display_name" type="text" required></td>
+                        <td><input id="admin_join_phone_number" name="phone_number" type="text" required></td>
+                        <td><input id="admin_join_password" name="password" type="password" required></td>
+                        <td><button type="submit" class="project_standard_button">가입하기</button></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
     </form>
 </section>
 <section class="card" data-admin-feature-session="approve_join" style="display:none;">
@@ -789,7 +1035,6 @@
 {% endif %}
 <section class="card" data-admin-feature-session="dropdown_add" style="display:none;">
     <h3>드롭다운 항목 추가</h3>
-    <p class="detail_guide">Tester의 업체명 / 양식제출자 / 모델명 / 공정번호 / 월 / 검사대수 드롭다운 항목을 추가합니다.</p>
     <form method="post" action="/admin/dropdown_options/add" class="form_stack dropdown_inline_form">
         <label for="dropdown_field_name">필드</label>
         <select id="dropdown_field_name" name="field_name" required>
@@ -809,7 +1054,6 @@
 </section>
 <section class="card" data-admin-feature-session="dropdown_delete" style="display:none;">
     <h3>드롭다운 항목 삭제</h3>
-    <p class="detail_guide">필드와 항목 값을 입력해 기존 드롭다운 항목을 삭제합니다.</p>
     <form method="post" action="/admin/dropdown_options/delete" class="form_stack dropdown_inline_form">
         <label for="dropdown_delete_field_name">필드</label>
         <select id="dropdown_delete_field_name" name="field_name" required>

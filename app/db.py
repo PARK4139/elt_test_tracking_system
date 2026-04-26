@@ -59,6 +59,7 @@ def _ensure_user_account_columns() -> None:
         "phone_number": "TEXT",
         "company_name": "TEXT",
         "department_name": "TEXT",
+        "internal_title": "TEXT",
         "is_approved": "INTEGER DEFAULT 1",
     }
     with engine.begin() as connection:
