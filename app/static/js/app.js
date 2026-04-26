@@ -117,6 +117,24 @@
         window.showCenterNonModalV2(message_text, "info");
     };
 
+    const read_cookie_value = (cookie_name) => {
+        const all_cookies = String(document.cookie || "").split(";");
+        for (const cookie_part of all_cookies) {
+            const [name_part, ...value_parts] = cookie_part.trim().split("=");
+            if (name_part !== cookie_name) {
+                continue;
+            }
+            return decodeURIComponent(value_parts.join("=") || "");
+        }
+        return "";
+    };
+    const get_storage_user_suffix = () => {
+        const role_name = (read_cookie_value("role_name") || "anon").trim() || "anon";
+        const phone_number = (read_cookie_value("phone_number") || "anon").trim() || "anon";
+        const normalize = (value) => String(value).replace(/[^a-zA-Z0-9_\-]/g, "_");
+        return `${normalize(role_name)}:${normalize(phone_number)}`;
+    };
+
     const init_resizable_basic_tables = () => {
         const all_basic_tables = Array.from(document.querySelectorAll("table.basic_table"));
         if (all_basic_tables.length === 0) {
@@ -143,7 +161,7 @@
             const table_key = table_element.id
                 ? `id:${table_element.id}`
                 : `idx:${table_index}`;
-            const storage_key = `basic_table_col_widths_v1:${window.location.pathname}:${table_key}`;
+            const storage_key = `basic_table_col_widths_v1:${get_storage_user_suffix()}:${window.location.pathname}:${table_key}`;
             let saved_widths = {};
             try {
                 saved_widths = JSON.parse(localStorage.getItem(storage_key) || "{}");
@@ -252,6 +270,79 @@
         });
     };
     init_resizable_basic_tables();
+
+    const init_short_value_cell_alignment = () => {
+        const tables = Array.from(document.querySelectorAll("table.basic_table"));
+        if (tables.length === 0) {
+            return;
+        }
+
+        const get_cell_display_value = (cell) => {
+            const input = cell.querySelector("input, textarea");
+            if (input && "value" in input) {
+                return String(input.value || "").trim();
+            }
+            const select = cell.querySelector("select");
+            if (select && "selectedIndex" in select) {
+                const selected_option = select.options[select.selectedIndex];
+                if (selected_option) {
+                    return String(selected_option.textContent || "").trim();
+                }
+            }
+            return String(cell.textContent || "").trim();
+        };
+
+        const update_cell_alignment = (cell) => {
+            if (!(cell instanceof HTMLTableCellElement)) {
+                return;
+            }
+            const value_text = get_cell_display_value(cell);
+            const value_length = value_text.length;
+            if (value_length > 0 && value_length < 20) {
+                cell.classList.add("short_value_center");
+            } else {
+                cell.classList.remove("short_value_center");
+            }
+        };
+
+        const update_table_alignment = (table) => {
+            table.querySelectorAll("td").forEach((cell) => update_cell_alignment(cell));
+        };
+
+        tables.forEach((table) => {
+            update_table_alignment(table);
+            table.addEventListener(
+                "input",
+                (event) => {
+                    const target_cell = event.target && event.target.closest ? event.target.closest("td") : null;
+                    if (target_cell) {
+                        update_cell_alignment(target_cell);
+                    }
+                },
+                true
+            );
+            table.addEventListener(
+                "change",
+                (event) => {
+                    const target_cell = event.target && event.target.closest ? event.target.closest("td") : null;
+                    if (target_cell) {
+                        update_cell_alignment(target_cell);
+                    }
+                },
+                true
+            );
+
+            const observer = new MutationObserver(() => {
+                update_table_alignment(table);
+            });
+            observer.observe(table, {
+                childList: true,
+                subtree: true,
+                characterData: true,
+            });
+        });
+    };
+    init_short_value_cell_alignment();
 
     const init_scroll_position_persistence = () => {
         const storage_key = `scroll_positions_v1:${window.location.pathname}`;
@@ -540,7 +631,41 @@
         row_element.dataset[dataset_key] = completed ? "1" : "0";
     };
 
+    const is_row_review_locked = (row_element) => row_element.dataset.reviewLocked === "1";
+
+    const lock_row_for_review_approved = (row_element) => {
+        if (!row_element || is_row_review_locked(row_element)) {
+            return;
+        }
+        row_element.dataset.reviewLocked = "1";
+        row_element.classList.add("row_review_approved_lock");
+        row_element.querySelectorAll("select[data-field], input[data-field], .test_timestamp_input, button, .row_select_checkbox").forEach((control) => {
+            if ("disabled" in control) {
+                control.disabled = true;
+            }
+        });
+        row_element.querySelectorAll(".test_timestamp_input").forEach((input_element) => {
+            if (!(input_element instanceof HTMLInputElement)) {
+                return;
+            }
+            if (!(input_element.value || "").trim()) {
+                input_element.placeholder = "입력승인 완료";
+            }
+        });
+    };
+
     const update_test_action_buttons = (row_element) => {
+        if (is_row_review_locked(row_element)) {
+            const low_test_start_button = row_element.querySelector(".low_test_start_button");
+            const low_test_end_button = row_element.querySelector(".low_test_end_button");
+            const high_test_start_button = row_element.querySelector(".high_test_start_button");
+            const high_test_end_button = row_element.querySelector(".high_test_end_button");
+            if (low_test_start_button) low_test_start_button.style.display = "none";
+            if (low_test_end_button) low_test_end_button.style.display = "none";
+            if (high_test_start_button) high_test_start_button.style.display = "none";
+            if (high_test_end_button) high_test_end_button.style.display = "none";
+            return;
+        }
         const low_test_started = get_completion_flag(
             row_element,
             "lowTestStartedDone",
@@ -909,7 +1034,7 @@
         }
 
         try {
-            const response = await fetch("/tester/rows/upsert", {
+            const response = await fetch("/user/rows/upsert", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
@@ -938,7 +1063,10 @@
         }
     };
 
-    const list_editable_rows = () => Array.from(tester_grid_body.querySelectorAll("tr.editable_row"));
+    const list_editable_rows = () =>
+        Array.from(tester_grid_body.querySelectorAll("tr.editable_row")).filter(
+            (row_element) => !is_row_review_locked(row_element)
+        );
     updateSaveControlsState = () => {
         let hasContext = !!getActiveFormSubmissionId();
         if (!hasContext) {
@@ -1377,6 +1505,31 @@
         });
     }
 
+    const flush_pending_deleted_rows = async () => {
+        const delete_row_ids = Array.from(pending_deleted_row_ids).filter(
+            (row_id) => Number.isInteger(Number(row_id)) && Number(row_id) > 0
+        );
+        if (delete_row_ids.length === 0) {
+            return true;
+        }
+        try {
+            const response = await fetch("/user/rows/delete", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ row_ids: delete_row_ids }),
+            });
+            if (!response.ok) {
+                openMessageModal(await read_error_detail(response));
+                return false;
+            }
+            pending_deleted_row_ids.clear();
+            return true;
+        } catch (_error) {
+            openMessageModal("행 삭제 중 네트워크 오류가 발생했습니다.");
+            return false;
+        }
+    };
+
     const save_all_rows_now = async (show_success_modal = false) => {
         const editable_rows = list_editable_rows();
         const has_any_row_input = editable_rows.some((row_element) =>
@@ -1397,6 +1550,7 @@
                 const input_element = row_element.querySelector(field.selector);
                 const trimmed_value = trim_timestamp_input(input_element);
                 if (!is_timestamp_format_valid(trimmed_value)) {
+                    await flush_pending_deleted_rows();
                     return false;
                 }
                 if (trimmed_value) {
@@ -1413,6 +1567,7 @@
         }
 
         if (validation_messages.length > 0) {
+            await flush_pending_deleted_rows();
             clear_non_modal_notice();
             if (window.showBlueNonModalV2) {
                 window.showBlueNonModalV2(`자동저장 안내: ${validation_messages[0]}`);
@@ -1450,7 +1605,7 @@
         }
 
         try {
-            const response = await fetch("/tester/rows/save_all", {
+            const response = await fetch("/user/rows/save_all", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -1513,6 +1668,55 @@
         bind_compact_width_behavior(row_element);
         bind_row_actions(row_element);
     }
+    const lock_reviewed_rows_from_server = async () => {
+        const all_rows = Array.from(tester_grid_body.querySelectorAll("tr.editable_row"));
+        const target_ids = all_rows
+            .map((row_element) => Number((row_element.dataset.id || "").trim()))
+            .filter((row_id) => Number.isInteger(row_id) && row_id > 0);
+        if (target_ids.length === 0) {
+            return;
+        }
+        const query = new URLSearchParams();
+        target_ids.forEach((row_id) => query.append("row_ids", String(row_id)));
+        try {
+            const response = await fetch(`/user/rows/review_status?${query.toString()}`);
+            if (!response.ok) {
+                return;
+            }
+            const payload = await response.json();
+            const reviewed_row_id_set = new Set(
+                (Array.isArray(payload && payload.reviewed_row_ids) ? payload.reviewed_row_ids : [])
+                    .map((row_id) => Number(row_id))
+                    .filter((row_id) => Number.isInteger(row_id) && row_id > 0)
+            );
+            let newly_locked_count = 0;
+            all_rows.forEach((row_element) => {
+                const row_id = Number((row_element.dataset.id || "").trim());
+                if (!Number.isInteger(row_id) || row_id <= 0) {
+                    return;
+                }
+                if (!reviewed_row_id_set.has(row_id)) {
+                    return;
+                }
+                if (!is_row_review_locked(row_element)) {
+                    newly_locked_count += 1;
+                }
+                lock_row_for_review_approved(row_element);
+                update_test_action_buttons(row_element);
+            });
+            if (newly_locked_count > 0) {
+                if (window.showBlueNonModalV2) {
+                    window.showBlueNonModalV2("입력승인이 되어 수정할수 없는 데이터가 생겼습니다.");
+                } else if (window.showCenterNonModalV2) {
+                    window.showCenterNonModalV2("입력승인이 되어 수정할수 없는 데이터가 생겼습니다.", "info");
+                }
+            }
+        } catch (_error) {
+            // ignore polling errors
+        }
+    };
+    lock_reviewed_rows_from_server();
+    window.setInterval(lock_reviewed_rows_from_server, 3000);
     update_select_all_button_label();
     updateSaveControlsState();
 

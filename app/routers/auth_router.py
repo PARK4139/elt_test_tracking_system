@@ -3,7 +3,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 import os
 
-from app.auth import ROLE_ADMIN, ROLE_TESTER, ensure_active_user_limit
+from app.auth import ROLE_ADMIN, ROLE_MASTER_ADMIN, ROLE_TESTER, ensure_active_user_limit
 from app.deps import database_session_dependency
 from app.models import UserAccount
 from app.services.dropdown_option_service import list_dropdown_options_for_field
@@ -83,10 +83,9 @@ def handle_login_submission(
 
     ensure_active_user_limit(user_name=normalized_phone_number)
     qc_mode_enabled = os.getenv("QC_MODE", "True").strip().lower() in {"1", "true", "yes", "on"}
-    if qc_mode_enabled:
-        redirect_url = "/admin" if user_account.role_name == ROLE_ADMIN else "/tester"
-    else:
-        redirect_url = "/admin" if user_account.role_name == ROLE_ADMIN else "/tester"
+    _ = qc_mode_enabled
+    is_admin_role = user_account.role_name in {ROLE_ADMIN, ROLE_MASTER_ADMIN}
+    redirect_url = "/admin" if is_admin_role else "/user"
     response = RedirectResponse(url=redirect_url, status_code=303)
     response.set_cookie("role_name", user_account.role_name, httponly=False)
     response.set_cookie("phone_number", normalized_phone_number, httponly=False)

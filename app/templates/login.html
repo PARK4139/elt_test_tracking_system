@@ -5,6 +5,7 @@
         <div></div>
         {% if qc_mode_enabled %}
         <div class="table_action_bar">
+            <button id="fill_login_sample_admin_a_button" type="button" class="qc_mode_action_button">샘플로그인양식채우기(A관리자)</button>
             <button id="fill_login_sample_a_button" type="button" class="qc_mode_action_button">샘플로그인양식채우기(A업체)</button>
             <button id="fill_login_sample_b_button" type="button" class="qc_mode_action_button">샘플로그인양식채우기(B업체)</button>
         </div>
@@ -35,11 +36,12 @@
 <script>
 (() => {
     const ui_sample_profiles_map = {{ (ui_sample_profiles_map or {})|tojson }};
+    const fill_admin_a_button = document.getElementById("fill_login_sample_admin_a_button");
     const fill_a_button = document.getElementById("fill_login_sample_a_button");
     const fill_b_button = document.getElementById("fill_login_sample_b_button");
     const phone_input = document.getElementById("phone_number");
     const password_input = document.getElementById("password");
-    if (!fill_a_button || !fill_b_button || !phone_input || !password_input) {
+    if (!fill_admin_a_button || !fill_a_button || !fill_b_button || !phone_input || !password_input) {
         return;
     }
 
@@ -54,6 +56,10 @@
     });
     fill_b_button.addEventListener("click", () => {
         apply_profile("B");
+    });
+    fill_admin_a_button.addEventListener("click", () => {
+        phone_input.value = "010-4444-4444";
+        password_input.value = "4444";
     });
 })();
 </script>

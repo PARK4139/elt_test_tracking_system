@@ -1,10 +1,10 @@
 import os
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, HTTPException, Query, Request, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 
-from app.auth import ROLE_TESTER
+from app.auth import ROLE_ADMIN, ROLE_MASTER_ADMIN, ROLE_TESTER
 from app.deps import current_role_name_dependency
 from app.deps import database_session_dependency
 from app.schemas import TestResultDeleteInput, TestResultPartialInput, TestResultSaveAllInput
@@ -16,6 +16,7 @@ from app.services.form_submission_service import (
 )
 from app.services.test_result_service import (
     list_unreviewed_test_results,
+    list_unreviewed_test_results_for_tester,
     mark_high_test_end,
     mark_high_test_start,
     mark_low_test_end,
@@ -26,7 +27,19 @@ from app.services.test_result_service import (
 )
 from app.services.dropdown_option_service import list_dropdown_options_map
 
-tester_router = APIRouter(prefix="/tester", tags=["tester"])
+tester_router = APIRouter(prefix="/user", tags=["tester"])
+
+
+def _assert_tester_only(current_role_name: str) -> None:
+    if current_role_name != ROLE_TESTER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This role is not allowed for this action.",
+        )
+
+
+def _is_admin_role(current_role_name: str) -> bool:
+    return current_role_name in {ROLE_ADMIN, ROLE_MASTER_ADMIN}
 
 
 def _get_current_user_info(request: Request, database_session) -> tuple[str, str]:
@@ -50,10 +63,25 @@ def render_tester_dashboard(
     database_session: database_session_dependency,
     current_role_name: current_role_name_dependency,
 ):
+    if current_role_name != ROLE_TESTER:
+        return RedirectResponse(url="/admin", status_code=303)
     qc_mode_enabled = os.getenv("QC_MODE", "True").strip().lower() in {"1", "true", "yes", "on"}
     if qc_mode_enabled and not (request.cookies.get("phone_number") or "").strip():
         return RedirectResponse(url="/login", status_code=303)
-    recent_test_results = list_unreviewed_test_results(database_session=database_session)
+    phone_number = (request.cookies.get("phone_number") or "").strip()
+    current_display_name, current_company_name = _get_current_user_info(
+        request=request,
+        database_session=database_session,
+    )
+    if current_role_name == ROLE_TESTER:
+        recent_test_results = list_unreviewed_test_results_for_tester(
+            database_session=database_session,
+            tester_phone=phone_number,
+            tester_company_name=current_company_name,
+            tester_display_name=current_display_name,
+        )
+    else:
+        recent_test_results = list_unreviewed_test_results(database_session=database_session)
     dropdown_options_map = list_dropdown_options_map(database_session=database_session)
     default_month_options = [str(month) for month in range(1, 13)]
     existing_month_options = [
@@ -85,10 +113,6 @@ def render_tester_dashboard(
         count_option_set.add(option_value)
     dropdown_options_map["field_02"] = merged_count_options
 
-    current_display_name, current_company_name = _get_current_user_info(
-        request=request,
-        database_session=database_session,
-    )
     templates = request.app.state.templates
     return templates.TemplateResponse(
         request=request,
@@ -105,11 +129,35 @@ def render_tester_dashboard(
     )
 
 
+@tester_router.get("/rows/review_status")
+def get_user_rows_review_status(
+    row_ids: list[int] = Query(default=[]),
+    database_session: database_session_dependency = None,
+    current_role_name: current_role_name_dependency = None,
+):
+    if not (_is_admin_role(current_role_name) or current_role_name == ROLE_TESTER):
+        _assert_tester_only(current_role_name)
+    normalized_row_ids = sorted({int(row_id) for row_id in row_ids if int(row_id) > 0})
+    if not normalized_row_ids:
+        return {"reviewed_row_ids": []}
+    reviewed_row_ids = list(
+        database_session.scalars(
+            select(TestResult.id).where(
+                TestResult.id.in_(normalized_row_ids),
+                TestResult.is_reviewed.is_(True),
+            )
+        )
+    )
+    return {"reviewed_row_ids": [int(row_id) for row_id in reviewed_row_ids]}
+
+
 @tester_router.post("/submissions")
 def create_submission(
     request: Request,
     database_session: database_session_dependency,
+    current_role_name: current_role_name_dependency,
 ):
+    _assert_tester_only(current_role_name)
     phone_number = (request.cookies.get("phone_number") or "").strip()
     if not phone_number:
         raise HTTPException(
@@ -131,7 +179,9 @@ def get_tester_submission(
     request: Request,
     form_submission_id: str,
     database_session: database_session_dependency,
+    current_role_name: current_role_name_dependency,
 ):
+    _assert_tester_only(current_role_name)
     sub = get_form_submission(
         database_session=database_session,
         submission_id=form_submission_id,
@@ -178,6 +228,8 @@ def upsert_tester_row(
     database_session: database_session_dependency,
     current_role_name: current_role_name_dependency,
 ):
+    if not (_is_admin_role(current_role_name) or current_role_name == ROLE_TESTER):
+        _assert_tester_only(current_role_name)
     target_id = (test_result_partial_input.form_submission_id or "").strip()
     if not target_id:
         raise HTTPException(
@@ -268,11 +320,11 @@ def start_low_test(
     database_session: database_session_dependency,
     current_role_name: current_role_name_dependency,
 ):
+    _assert_tester_only(current_role_name)
     try:
-        if current_role_name == ROLE_TESTER:
-            _assert_tester_draft_submission_for_row(
-                request, database_session, id, current_role_name
-            )
+        _assert_tester_draft_submission_for_row(
+            request, database_session, id, current_role_name
+        )
     except ValueError as exception:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -305,11 +357,11 @@ def end_low_test(
     database_session: database_session_dependency,
     current_role_name: current_role_name_dependency,
 ):
+    _assert_tester_only(current_role_name)
     try:
-        if current_role_name == ROLE_TESTER:
-            _assert_tester_draft_submission_for_row(
-                request, database_session, id, current_role_name
-            )
+        _assert_tester_draft_submission_for_row(
+            request, database_session, id, current_role_name
+        )
     except ValueError as exception:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -343,11 +395,11 @@ def start_high_test(
     database_session: database_session_dependency,
     current_role_name: current_role_name_dependency,
 ):
+    _assert_tester_only(current_role_name)
     try:
-        if current_role_name == ROLE_TESTER:
-            _assert_tester_draft_submission_for_row(
-                request, database_session, id, current_role_name
-            )
+        _assert_tester_draft_submission_for_row(
+            request, database_session, id, current_role_name
+        )
     except ValueError as exception:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -380,11 +432,11 @@ def end_high_test(
     database_session: database_session_dependency,
     current_role_name: current_role_name_dependency,
 ):
+    _assert_tester_only(current_role_name)
     try:
-        if current_role_name == ROLE_TESTER:
-            _assert_tester_draft_submission_for_row(
-                request, database_session, id, current_role_name
-            )
+        _assert_tester_draft_submission_for_row(
+            request, database_session, id, current_role_name
+        )
     except ValueError as exception:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -418,6 +470,8 @@ def delete_tester_rows(
     database_session: database_session_dependency,
     current_role_name: current_role_name_dependency,
 ):
+    if not (_is_admin_role(current_role_name) or current_role_name == ROLE_TESTER):
+        _assert_tester_only(current_role_name)
     phone = (request.cookies.get("phone_number") or "").strip()
     if current_role_name == ROLE_TESTER:
         for row_id in test_result_delete_input.row_ids:
@@ -434,6 +488,7 @@ def delete_tester_rows(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail=str(exception),
                     ) from exception
+
     deleted_count = delete_test_results_by_ids(
         database_session=database_session,
         row_ids=test_result_delete_input.row_ids,
@@ -448,6 +503,8 @@ def save_all_tester_rows(
     database_session: database_session_dependency,
     current_role_name: current_role_name_dependency,
 ):
+    if not (_is_admin_role(current_role_name) or current_role_name == ROLE_TESTER):
+        _assert_tester_only(current_role_name)
     for row in test_result_save_all_input.rows:
         target_id = (row.form_submission_id or "").strip()
         if not target_id:

@@ -1,13 +1,14 @@
 import os
+from datetime import timedelta
 
-from fastapi import APIRouter, Form, HTTPException, Request, status
+from fastapi import APIRouter, Form, HTTPException, Query, Request, status
 from fastapi.responses import RedirectResponse
-from sqlalchemy import select
+from sqlalchemy import and_, exists, func, or_, select
 from sqlalchemy.orm import Session
 
 from app.auth import ROLE_ADMIN, ROLE_MASTER_ADMIN, ROLE_TESTER
 from app.deps import current_role_name_dependency, database_session_dependency
-from app.models import UserAccount
+from app.models import FormSubmission, TestResult, UserAccount, get_utc_now_datetime
 from app.schemas import TestResultReviewCompleteInput
 from app.services.form_submission_service import (
     approve_submission,
@@ -29,6 +30,14 @@ from app.services.dropdown_option_service import (
 
 
 admin_router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+def _ensure_admin_role(current_role_name: str) -> None:
+    if current_role_name not in {ROLE_ADMIN, ROLE_MASTER_ADMIN}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This role is not allowed for this action.",
+        )
 
 
 def _admin_identity_context(database_session: Session, request: Request) -> dict:
@@ -118,6 +127,8 @@ def render_admin_dashboard(
     database_session: database_session_dependency,
     current_role_name: current_role_name_dependency,
 ):
+    if current_role_name not in {ROLE_ADMIN, ROLE_MASTER_ADMIN}:
+        return RedirectResponse(url="/login", status_code=303)
     recent_test_results = list_recent_test_results(database_session=database_session, limit=50)
     pending_tester_join_requests = _tester_accounts_for_admin(database_session)
     templates = request.app.state.templates
@@ -154,6 +165,7 @@ def create_admin_user_account(
     phone_number: str = Form(...),
     password: str = Form(...),
 ):
+    _ensure_admin_role(current_role_name)
     normalized_department_name = department_name.strip()
     normalized_display_name = display_name.strip()
     normalized_internal_title = internal_title.strip()
@@ -265,6 +277,7 @@ def create_tester_user_account(
     phone_number: str = Form(...),
     password: str = Form(...),
 ):
+    _ensure_admin_role(current_role_name)
     normalized_company_name = company_name.strip()
     normalized_display_name = display_name.strip()
     normalized_phone_number = phone_number.strip()
@@ -369,6 +382,7 @@ def approve_tester_join_request(
     current_role_name: current_role_name_dependency,
     user_account_id: int = Form(...),
 ):
+    _ensure_admin_role(current_role_name)
     user_account = database_session.get(UserAccount, user_account_id)
     if user_account is not None and user_account.role_name == "tester":
         user_account.is_approved = True
@@ -405,6 +419,7 @@ def delete_tester_join_request(
     current_role_name: current_role_name_dependency,
     user_account_id: int = Form(...),
 ):
+    _ensure_admin_role(current_role_name)
     user_account = database_session.get(UserAccount, user_account_id)
     if user_account is not None and user_account.role_name == "tester":
         database_session.delete(user_account)
@@ -438,8 +453,10 @@ def delete_tester_join_request(
 def delete_admin_user_account(
     request: Request,
     database_session: database_session_dependency,
+    current_role_name: current_role_name_dependency,
     user_account_id: int = Form(...),
 ):
+    _ensure_admin_role(current_role_name)
     target_admin_user_account = database_session.get(UserAccount, user_account_id)
     if target_admin_user_account is not None and target_admin_user_account.role_name == ROLE_ADMIN:
         current_phone_number = (request.cookies.get("phone_number") or "").strip()
@@ -454,8 +471,10 @@ def delete_admin_user_account(
 @admin_router.post("/submission/approve")
 def approve_submission_by_submission_id(
     database_session: database_session_dependency,
+    current_role_name: current_role_name_dependency,
     form_submission_id: str = Form(""),
 ):
+    _ensure_admin_role(current_role_name)
     target_id = (form_submission_id or "").strip()
     if not target_id:
         raise HTTPException(
@@ -483,8 +502,10 @@ def approve_submission_by_submission_id(
 @admin_router.post("/submission/delete")
 def delete_submission_by_form_submission_id(
     database_session: database_session_dependency,
+    current_role_name: current_role_name_dependency,
     form_submission_id: str = Form(""),
 ):
+    _ensure_admin_role(current_role_name)
     target_id = (form_submission_id or "").strip()
     if not target_id:
         raise HTTPException(
@@ -511,7 +532,9 @@ def delete_submission_by_form_submission_id(
 def mark_admin_rows_review_complete(
     test_result_review_complete_input: TestResultReviewCompleteInput,
     database_session: database_session_dependency,
+    current_role_name: current_role_name_dependency,
 ):
+    _ensure_admin_role(current_role_name)
     updated_count = mark_test_results_review_complete_by_ids(
         database_session=database_session,
         row_ids=test_result_review_complete_input.row_ids,
@@ -523,7 +546,9 @@ def mark_admin_rows_review_complete(
 def mark_admin_rows_review_pending(
     test_result_review_complete_input: TestResultReviewCompleteInput,
     database_session: database_session_dependency,
+    current_role_name: current_role_name_dependency,
 ):
+    _ensure_admin_role(current_role_name)
     updated_count = mark_test_results_review_pending_by_ids(
         database_session=database_session,
         row_ids=test_result_review_complete_input.row_ids,
@@ -534,9 +559,11 @@ def mark_admin_rows_review_pending(
 @admin_router.post("/dropdown_options/add")
 def add_admin_dropdown_option(
     database_session: database_session_dependency,
+    current_role_name: current_role_name_dependency,
     field_name: str = Form(...),
     option_value: str = Form(...),
 ):
+    _ensure_admin_role(current_role_name)
     try:
         add_dropdown_option_if_missing(
             database_session=database_session,
@@ -551,9 +578,11 @@ def add_admin_dropdown_option(
 @admin_router.post("/dropdown_options/delete")
 def delete_admin_dropdown_option(
     database_session: database_session_dependency,
+    current_role_name: current_role_name_dependency,
     field_name: str = Form(...),
     option_value: str = Form(...),
 ):
+    _ensure_admin_role(current_role_name)
     try:
         delete_dropdown_option_if_exists(
             database_session=database_session,
@@ -569,7 +598,9 @@ def delete_admin_dropdown_option(
 def list_admin_dropdown_options_by_field(
     field_name: str,
     database_session: database_session_dependency,
+    current_role_name: current_role_name_dependency,
 ):
+    _ensure_admin_role(current_role_name)
     try:
         option_values = list_dropdown_options_for_field(
             database_session=database_session,
@@ -578,3 +609,131 @@ def list_admin_dropdown_options_by_field(
     except ValueError:
         option_values = []
     return {"field_name": field_name, "option_values": option_values}
+
+
+@admin_router.get("/input_activity_status")
+def get_input_activity_status(
+    database_session: database_session_dependency,
+    current_role_name: current_role_name_dependency,
+):
+    _ensure_admin_role(current_role_name)
+    active_cutoff = get_utc_now_datetime() - timedelta(seconds=8)
+    unreviewed = or_(TestResult.is_reviewed == False, TestResult.is_reviewed.is_(None))  # noqa: E712
+    tester_draft_submission = exists(
+        select(1).where(
+            FormSubmission.submission_id == TestResult.form_submission_id,
+            FormSubmission.status == "draft",
+            FormSubmission.created_by_phone.is_not(None),
+            exists(
+                select(1).where(
+                    UserAccount.phone_number == FormSubmission.created_by_phone,
+                    UserAccount.role_name == ROLE_TESTER,
+                )
+            ),
+        )
+    )
+    active_row_ids = list(
+        database_session.scalars(
+            select(TestResult.id).where(
+                and_(
+                    unreviewed,
+                    tester_draft_submission,
+                    TestResult.updated_at >= active_cutoff,
+                )
+            )
+        )
+    )
+    active_user_rows = list(
+        database_session.execute(
+            select(UserAccount.company_name, UserAccount.display_name)
+            .join(FormSubmission, UserAccount.phone_number == FormSubmission.created_by_phone)
+            .join(TestResult, TestResult.form_submission_id == FormSubmission.submission_id)
+            .where(
+                and_(
+                    unreviewed,
+                    FormSubmission.status == "draft",
+                    UserAccount.role_name == ROLE_TESTER,
+                    TestResult.updated_at >= active_cutoff,
+                )
+            )
+            .distinct()
+        )
+    )
+    tracked_row_count = int(
+        database_session.scalar(
+            select(func.count(TestResult.id)).where(
+                and_(
+                    unreviewed,
+                    tester_draft_submission,
+                )
+            )
+        )
+        or 0
+    )
+    normalized_user_names = []
+    normalized_user_labels = []
+    for company_name, display_name in active_user_rows:
+        normalized_company_name = str(company_name or "").strip()
+        normalized_display_name = str(display_name or "").strip()
+        if normalized_display_name:
+            normalized_user_names.append(normalized_display_name)
+        if normalized_company_name and normalized_display_name:
+            normalized_user_labels.append(f"{normalized_company_name} 업체 {normalized_display_name} 사용자")
+        elif normalized_display_name:
+            normalized_user_labels.append(f"{normalized_display_name} 사용자")
+        elif normalized_company_name:
+            normalized_user_labels.append(f"{normalized_company_name} 업체 사용자")
+    return {
+        "is_user_input_active": bool(active_row_ids),
+        "active_row_ids": [int(row_id) for row_id in active_row_ids],
+        "active_user_names": normalized_user_names,
+        "active_user_labels": normalized_user_labels,
+        "tracked_row_count": tracked_row_count,
+    }
+
+
+@admin_router.get("/rows/by_ids")
+def list_admin_rows_by_ids(
+    database_session: database_session_dependency,
+    current_role_name: current_role_name_dependency,
+    row_ids: list[int] = Query(default=[]),
+):
+    _ensure_admin_role(current_role_name)
+    normalized_row_ids = sorted({int(row_id) for row_id in row_ids if int(row_id) > 0})
+    if not normalized_row_ids:
+        return {"rows": []}
+    rows = list(
+        database_session.scalars(
+            select(TestResult).where(TestResult.id.in_(normalized_row_ids))
+        )
+    )
+
+    def _to_text(value):
+        if value is None:
+            return ""
+        return str(value)
+
+    rows_payload = []
+    for row in rows:
+        rows_payload.append(
+            {
+                "id": int(row.id),
+                "form_submission_id": _to_text(row.form_submission_id),
+                "key_1": _to_text(row.key_1),
+                "key_2": _to_text(row.key_2 or row.data_writer_name),
+                "key_3": _to_text(row.key_3),
+                "key_4": _to_text(row.key_4),
+                "field_01": _to_text(row.field_01),
+                "field_02": _to_text(row.field_02),
+                "low_test_started_at": _to_text(row.low_test_started_at),
+                "low_test_ended_at": _to_text(row.low_test_ended_at),
+                "low_test_delta": _to_text(row.low_test_delta),
+                "high_test_started_at": _to_text(row.high_test_started_at),
+                "high_test_ended_at": _to_text(row.high_test_ended_at),
+                "high_test_delta": _to_text(row.high_test_delta),
+                "is_reviewed": bool(row.is_reviewed),
+                "created_at": _to_text(row.created_at),
+                "updated_at": _to_text(row.updated_at),
+            }
+        )
+    return {"rows": rows_payload}

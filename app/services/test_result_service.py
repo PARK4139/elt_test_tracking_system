@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import delete, exists, or_, select, update
+from sqlalchemy import and_, delete, exists, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -77,6 +77,8 @@ def _upsert_partial_test_result_internal(
             key_4=key_4,
         )
         database_session.add(existing_test_result)
+    elif bool(existing_test_result.is_reviewed):
+        raise ValueError("입력승인이 되어 수정할수 없는 데이터가 생겼습니다.")
 
     for field_name in PARTIAL_UPDATE_FIELD_NAMES:
         new_value = _strip_if_string(getattr(test_result_partial_input, field_name))
@@ -127,11 +129,64 @@ def list_unreviewed_test_results(database_session: Session) -> list[TestResult]:
     return list(result_rows)
 
 
+def list_unreviewed_test_results_for_tester(
+    database_session: Session,
+    tester_phone: str,
+    tester_company_name: str = "",
+    tester_display_name: str = "",
+) -> list[TestResult]:
+    """로그인 tester 본인의 draft/legacy 미승인 행 조회."""
+    normalized_phone = (tester_phone or "").strip()
+    normalized_company_name = (tester_company_name or "").strip()
+    normalized_display_name = (tester_display_name or "").strip()
+    if not normalized_phone and not (normalized_company_name and normalized_display_name):
+        return []
+    unreviewed = or_(TestResult.is_reviewed == False, TestResult.is_reviewed.is_(None))  # noqa: E712
+    owner_by_row = and_(
+        TestResult.key_1 == normalized_company_name,
+        or_(
+            TestResult.key_2 == normalized_display_name,
+            TestResult.data_writer_name == normalized_display_name,
+        ),
+    )
+    owned_draft = exists(
+        select(1).where(
+            FormSubmission.submission_id == TestResult.form_submission_id,
+            FormSubmission.status == "draft",
+            or_(
+                FormSubmission.created_by_phone == normalized_phone,
+                and_(
+                    FormSubmission.created_by_phone.is_(None),
+                    owner_by_row,
+                ),
+            ),
+        )
+    )
+    legacy_without_submission = and_(
+        or_(
+            TestResult.form_submission_id.is_(None),
+            TestResult.form_submission_id == "",
+        ),
+        owner_by_row,
+    )
+    result_rows = database_session.scalars(
+        select(TestResult)
+        .where(unreviewed, or_(owned_draft, legacy_without_submission))
+        .order_by(TestResult.updated_at.desc())
+    )
+    return list(result_rows)
+
+
 def _get_test_result_or_raise(database_session: Session, test_result_id: int) -> TestResult:
     test_result = database_session.get(TestResult, test_result_id)
     if test_result is None:
         raise LookupError("Test result not found.")
     return test_result
+
+
+def _assert_not_reviewed(test_result: TestResult) -> None:
+    if bool(test_result.is_reviewed):
+        raise ValueError("입력승인이 되어 수정할수 없는 데이터가 생겼습니다.")
 
 
 def _commit_and_refresh(database_session: Session, test_result: TestResult) -> TestResult:
@@ -146,6 +201,7 @@ def _to_delta_string(started_at: datetime, ended_at: datetime) -> str:
 
 def mark_low_test_start(database_session: Session, test_result_id: int) -> TestResult:
     test_result = _get_test_result_or_raise(database_session, test_result_id)
+    _assert_not_reviewed(test_result)
     if test_result.low_test_started_at is not None:
         raise ValueError("low_test/start cannot run twice.")
     test_result.low_test_started_at = get_utc_now_datetime()
@@ -154,6 +210,7 @@ def mark_low_test_start(database_session: Session, test_result_id: int) -> TestR
 
 def mark_low_test_end(database_session: Session, test_result_id: int) -> TestResult:
     test_result = _get_test_result_or_raise(database_session, test_result_id)
+    _assert_not_reviewed(test_result)
     if test_result.low_test_started_at is None:
         raise ValueError("low_test/end requires low_test/start.")
     if test_result.low_test_ended_at is not None:
@@ -168,6 +225,7 @@ def mark_low_test_end(database_session: Session, test_result_id: int) -> TestRes
 
 def mark_high_test_start(database_session: Session, test_result_id: int) -> TestResult:
     test_result = _get_test_result_or_raise(database_session, test_result_id)
+    _assert_not_reviewed(test_result)
     if test_result.high_test_started_at is not None:
         raise ValueError("high_test/start cannot run twice.")
     test_result.high_test_started_at = get_utc_now_datetime()
@@ -176,6 +234,7 @@ def mark_high_test_start(database_session: Session, test_result_id: int) -> Test
 
 def mark_high_test_end(database_session: Session, test_result_id: int) -> TestResult:
     test_result = _get_test_result_or_raise(database_session, test_result_id)
+    _assert_not_reviewed(test_result)
     if test_result.high_test_started_at is None:
         raise ValueError("high_test/end requires high_test/start.")
     if test_result.high_test_ended_at is not None:

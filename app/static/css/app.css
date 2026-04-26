@@ -247,6 +247,20 @@ button:disabled {
     text-align: left;
 }
 
+.basic_table td.short_value_center {
+    text-align: center;
+}
+
+.basic_table tr.row_user_editing_lock td input,
+.basic_table tr.row_user_editing_lock td select,
+.basic_table tr.row_user_editing_lock td textarea,
+.basic_table tr.row_user_editing_lock td button {
+    background: #F2F5F7 !important;
+    color: #9AA7AF !important;
+    border-color: #D6E2E8 !important;
+    cursor: not-allowed !important;
+}
+
 .basic_table th {
     position: relative;
     text-align: center;

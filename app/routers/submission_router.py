@@ -1,6 +1,6 @@
 import re
 
-from fastapi import APIRouter, Form, HTTPException, status
+from fastapi import APIRouter, Form, HTTPException, Request, status
 from sqlalchemy import select
 
 from app.deps import database_session_dependency
@@ -39,6 +39,7 @@ def _generate_form_submission_id(database_session, company_name: str, display_na
 
 @submission_router.post("/create")
 def create_submission(
+    request: Request,
     database_session: database_session_dependency,
     company_name: str = Form(""),
     display_name: str = Form(""),
@@ -48,9 +49,11 @@ def create_submission(
         company_name=company_name,
         display_name=display_name,
     )
+    created_by_phone = (request.cookies.get("phone_number") or "").strip() or None
     row = FormSubmission(
         submission_id=submission_id,
         status="draft",
+        created_by_phone=created_by_phone,
     )
     database_session.add(row)
     database_session.commit()
