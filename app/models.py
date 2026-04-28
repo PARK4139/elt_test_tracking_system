@@ -64,7 +64,14 @@ class UserAccount(Base):
 class TestResult(Base):
     __tablename__ = "test_result"
     __table_args__ = (
-        UniqueConstraint("key_1", "key_2", "key_3", "key_4", name="uq_test_result_key_quartet"),
+        UniqueConstraint(
+            "form_submission_id",
+            "key_1",
+            "key_2",
+            "key_3",
+            "key_4",
+            name="uq_test_result_submission_key_quintet",
+        ),
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
@@ -89,6 +96,17 @@ class TestResult(Base):
     field_08: Mapped[str | None] = mapped_column(Text, nullable=True)
     field_09: Mapped[str | None] = mapped_column(Text, nullable=True)
     field_10: Mapped[str | None] = mapped_column(Text, nullable=True)
+    field_11: Mapped[str | None] = mapped_column(Text, nullable=True)
+    field_12: Mapped[str | None] = mapped_column(Text, nullable=True)
+    field_13: Mapped[str | None] = mapped_column(Text, nullable=True)
+    field_14: Mapped[str | None] = mapped_column(Text, nullable=True)
+    field_15: Mapped[str | None] = mapped_column(Text, nullable=True)
+    field_16: Mapped[str | None] = mapped_column(Text, nullable=True)
+    field_17: Mapped[str | None] = mapped_column(Text, nullable=True)
+    field_18: Mapped[str | None] = mapped_column(Text, nullable=True)
+    field_19: Mapped[str | None] = mapped_column(Text, nullable=True)
+    field_20: Mapped[str | None] = mapped_column(Text, nullable=True)
+    field_21: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     low_test_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     low_test_ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

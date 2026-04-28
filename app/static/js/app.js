@@ -575,11 +575,18 @@
         }
     }
 
+    // NOTE: field_names are optional fields that can be saved when present.
+    // Only a small subset is required to allow autosave/submission flow.
     const field_names = [
-        "field_01",
-        "field_02",
+        "field_01", // 월 (required)
+        "field_02", // 검사대수 (required)
+        "field_03", // PASS / FAIL1 (optional)
+        "field_04", // PASS / FAIL2 (optional)
+        "field_05", // 불량내용 (optional)
+        "field_06", // 확인사항 (optional)
+        "field_07", // 조치사항 (optional)
     ];
-    const required_field_names = ["key_1", "key_2", "key_3", "key_4", ...field_names];
+    const required_field_names = ["key_1", "key_2", "key_3", "key_4", "field_01", "field_02"];
     const field_label_map = {
         key_1: "업체명",
         key_2: "양식제출자",
@@ -587,6 +594,11 @@
         key_4: "공정번호",
         field_01: "월",
         field_02: "검사대수",
+        field_03: "PASS / FAIL1",
+        field_04: "PASS / FAIL2",
+        field_05: "불량내용",
+        field_06: "확인사항",
+        field_07: "조치사항",
     };
     const time_field_definitions = [
         { selector: ".low_test_started_at_cell", label: "저온 투입일" },
@@ -723,6 +735,15 @@
                 .join("");
             return `<select data-field="${field_name}"><option value=""></option>${option_html}</select>`;
         };
+        const build_pass_fail_select_html = (field_name) => {
+            return `
+                <select data-field="${field_name}">
+                    <option value=""></option>
+                    <option value="PASS">PASS</option>
+                    <option value="FAIL">FAIL</option>
+                </select>
+            `.trim();
+        };
 
         const active_sid = getActiveFormSubmissionId();
         const sub_text = active_sid || "자동계산";
@@ -760,6 +781,7 @@
                 </div>
             </td>
             <td class="low_test_delta_cell"><span class="delta_value is_placeholder">자동계산</span></td>
+            <td>${build_pass_fail_select_html("field_03")}</td>
             <td class="test_action_td">
                 <div class="test_action_cell">
                     <input class="high_test_started_at_cell test_timestamp_input" value="">
@@ -773,6 +795,10 @@
                 </div>
             </td>
             <td class="high_test_delta_cell"><span class="delta_value is_placeholder">자동계산</span></td>
+            <td>${build_pass_fail_select_html("field_04")}</td>
+            <td><input data-field="field_05" value=""></td>
+            <td><input data-field="field_06" value=""></td>
+            <td><input data-field="field_07" value=""></td>
         `;
 
         const month_select = row_element.querySelector('select[data-field="field_01"]');

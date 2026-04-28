@@ -22,6 +22,17 @@ PARTIAL_UPDATE_FIELD_NAMES = [
     "field_08",
     "field_09",
     "field_10",
+    "field_11",
+    "field_12",
+    "field_13",
+    "field_14",
+    "field_15",
+    "field_16",
+    "field_17",
+    "field_18",
+    "field_19",
+    "field_20",
+    "field_21",
     "low_test_started_at",
     "low_test_ended_at",
     "low_test_delta",
@@ -57,11 +68,15 @@ def _upsert_partial_test_result_internal(
     key_2 = _strip_if_string(test_result_partial_input.key_2)
     key_3 = _strip_if_string(test_result_partial_input.key_3)
     key_4 = _strip_if_string(test_result_partial_input.key_4)
+    form_submission_id = _strip_if_string(test_result_partial_input.form_submission_id)
     if not key_1 or not key_2 or not key_3 or not key_4:
         raise ValueError("key_1, key_2, key_3, and key_4 must be non-empty after trimming.")
+    if not form_submission_id:
+        raise ValueError("form_submission_id is required.")
 
     existing_test_result = database_session.scalar(
         select(TestResult).where(
+            TestResult.form_submission_id == form_submission_id,
             TestResult.key_1 == key_1,
             TestResult.key_2 == key_2,
             TestResult.key_3 == key_3,
@@ -96,7 +111,9 @@ def _upsert_partial_test_result_internal(
             database_session.commit()
         except IntegrityError as exception:
             database_session.rollback()
-            raise ValueError("A row with the same key_1, key_2, key_3, key_4 already exists.") from exception
+            raise ValueError(
+                "A row with the same form_submission_id, key_1, key_2, key_3, key_4 already exists."
+            ) from exception
         database_session.refresh(existing_test_result)
     return existing_test_result
 
@@ -284,7 +301,9 @@ def save_all_test_results_atomically(
         database_session.commit()
     except IntegrityError as exception:
         database_session.rollback()
-        raise ValueError("A row with the same key_1, key_2, key_3, key_4 already exists.") from exception
+        raise ValueError(
+            "A row with the same form_submission_id, key_1, key_2, key_3, key_4 already exists."
+        ) from exception
     except Exception:
         database_session.rollback()
         raise

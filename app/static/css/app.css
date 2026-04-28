@@ -158,7 +158,7 @@ button:disabled {
 
 .page_container {
     width: 100%;
-    max-width: 1200px;
+    max-width: none;
     margin: 24px auto;
     padding: 0 16px;
     display: grid;
@@ -171,6 +171,9 @@ button:disabled {
     padding: 16px;
     background: #FFFFFF;
     overflow: hidden;
+    width: 95vw;
+    max-width: 95vw;
+    margin: 0 auto;
 }
 
 .form_stack {
@@ -417,6 +420,40 @@ button:disabled {
     width: 90%;
     min-width: 0;
     max-width: none;
+}
+
+/* 데이터 입력승인 — 검토결과 열(버튼 전용)만 좁게 (기본 ~100px, 리사이즈 상한 132px — admin_grid JS과 동일) */
+#admin_grid_table th.review_status_column,
+#admin_grid_table td.review_status_cell {
+    width: 0.1%;
+    max-width: 132px;
+    min-width: 0;
+    padding: 2px 4px;
+    box-sizing: border-box;
+    vertical-align: middle;
+    white-space: normal;
+}
+
+#admin_grid_table td.review_status_cell .table_action_bar {
+    flex-wrap: wrap;
+    gap: 4px;
+    row-gap: 2px;
+    max-width: 100%;
+    justify-content: center;
+}
+
+#admin_grid_table .admin_single_review_toggle_button {
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
+    padding: 3px 6px;
+    font-size: 12px;
+    line-height: 1.25;
+    font-weight: 500;
+    white-space: normal;
+    text-align: center;
+    box-sizing: border-box;
+    word-break: keep-all;
 }
 
 .test_action_cell {

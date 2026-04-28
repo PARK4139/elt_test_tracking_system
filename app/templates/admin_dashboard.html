@@ -38,11 +38,6 @@
             <button id="admin_append_excel_button" type="button" class="project_standard_button">기존엑셀에 데이터 추가</button>
         </div>
     </div>
-    {% if qc_mode_enabled %}
-    <div class="section_header_row">
-        <p class="detail_guide">※주의: 실시간 자동저장</p>
-    </div>
-    {% endif %}
     <div class="tester_table_wrap">
         <table id="admin_grid_table" class="basic_table">
             <thead>
@@ -59,12 +54,30 @@
                     <th>저온 투입일</th>
                     <th>저온 완료일</th>
                     <th>저온 시간</th>
+                    <th>PASS / FAIL1</th>
                     <th>고온 투입일</th>
                     <th>고온 완료일</th>
                     <th>고온 시간</th>
+                    <th>PASS / FAIL2</th>
+                    <th>불량내용</th>
+                    <th>확인사항</th>
+                    <th>조치사항</th>
+                    <th>발생구분</th>
+                    <th>원인구분</th>
+                    <th>불량유형</th>
+                    <th>원인 / 조치</th>
+                    <th>적용시점</th>
+                    <th>초품 ECO No.</th>
+                    <th>비고</th>
+                    <th>검사수량</th>
+                    <th>불량수량</th>
+                    <th>ST</th>
+                    <th>rr</th>
+                    <th>임율</th>
+                    <th>비용</th>
                     <th class="hidden_audit_column">데이터생성시각</th>
                     <th class="hidden_audit_column">데이터수정시각</th>
-                    <th>검토결과</th>
+                    <th class="review_status_column">검토결과</th>
                 </tr>
             </thead>
             <tbody>
@@ -83,9 +96,39 @@
                     <td><input class="admin_timestamp_input" data-field="low_test_started_at" value="{{ row.low_test_started_at or '' }}"></td>
                     <td><input class="admin_timestamp_input" data-field="low_test_ended_at" value="{{ row.low_test_ended_at or '' }}"></td>
                     <td><input data-field="low_test_delta" value="{{ row.low_test_delta or '' }}" placeholder="자동계산" readonly></td>
+                    <td>
+                        <select data-field="field_03">
+                            <option value=""></option>
+                            <option value="PASS" {% if (row.field_03 or "") == "PASS" %}selected{% endif %}>PASS</option>
+                            <option value="FAIL" {% if (row.field_03 or "") == "FAIL" %}selected{% endif %}>FAIL</option>
+                        </select>
+                    </td>
                     <td><input class="admin_timestamp_input" data-field="high_test_started_at" value="{{ row.high_test_started_at or '' }}"></td>
                     <td><input class="admin_timestamp_input" data-field="high_test_ended_at" value="{{ row.high_test_ended_at or '' }}"></td>
                     <td><input data-field="high_test_delta" value="{{ row.high_test_delta or '' }}" placeholder="자동계산" readonly></td>
+                    <td>
+                        <select data-field="field_04">
+                            <option value=""></option>
+                            <option value="PASS" {% if (row.field_04 or "") == "PASS" %}selected{% endif %}>PASS</option>
+                            <option value="FAIL" {% if (row.field_04 or "") == "FAIL" %}selected{% endif %}>FAIL</option>
+                        </select>
+                    </td>
+                    <td><input data-field="field_05" value="{{ row.field_05 or '' }}"></td>
+                    <td><input data-field="field_06" value="{{ row.field_06 or '' }}"></td>
+                    <td><input data-field="field_07" value="{{ row.field_07 or '' }}"></td>
+                    <td><input data-field="field_11" value="{{ row.field_11 or '' }}"></td>
+                    <td><input data-field="field_12" value="{{ row.field_12 or '' }}"></td>
+                    <td><input data-field="field_13" value="{{ row.field_13 or '' }}"></td>
+                    <td><input data-field="field_14" value="{{ row.field_14 or '' }}"></td>
+                    <td><input data-field="field_15" value="{{ row.field_15 or '' }}"></td>
+                    <td><input data-field="field_16" value="{{ row.field_16 or '' }}"></td>
+                    <td><input data-field="field_17" value="{{ row.field_17 or '' }}"></td>
+                    <td><input data-field="field_08" value="{{ row.field_08 or '' }}"></td>
+                    <td><input data-field="field_09" value="{{ row.field_09 or '' }}"></td>
+                    <td><input data-field="field_18" value="{{ row.field_18 or '' }}"></td>
+                    <td><input data-field="field_19" value="{{ row.field_19 or '' }}"></td>
+                    <td><input data-field="field_20" value="{{ row.field_20 or '' }}"></td>
+                    <td><input data-field="field_21" value="{{ row.field_21 or '' }}"></td>
                     <td class="hidden_audit_column">{{ row.created_at }}</td>
                     <td class="hidden_audit_column">{{ row.updated_at }}</td>
                     <td class="review_status_cell">
@@ -122,9 +165,27 @@
                     <td>{{ row.low_test_started_at or "" }}</td>
                     <td>{{ row.low_test_ended_at or "" }}</td>
                     <td>{{ row.low_test_delta or "" }}</td>
+                    <td>{{ row.field_03 or "" }}</td>
                     <td>{{ row.high_test_started_at or "" }}</td>
                     <td>{{ row.high_test_ended_at or "" }}</td>
                     <td>{{ row.high_test_delta or "" }}</td>
+                    <td>{{ row.field_04 or "" }}</td>
+                    <td>{{ row.field_05 or "" }}</td>
+                    <td>{{ row.field_06 or "" }}</td>
+                    <td>{{ row.field_07 or "" }}</td>
+                    <td>{{ row.field_11 or "" }}</td>
+                    <td>{{ row.field_12 or "" }}</td>
+                    <td>{{ row.field_13 or "" }}</td>
+                    <td>{{ row.field_14 or "" }}</td>
+                    <td>{{ row.field_15 or "" }}</td>
+                    <td>{{ row.field_16 or "" }}</td>
+                    <td>{{ row.field_17 or "" }}</td>
+                    <td>{{ row.field_08 or "" }}</td>
+                    <td>{{ row.field_09 or "" }}</td>
+                    <td>{{ row.field_18 or "" }}</td>
+                    <td>{{ row.field_19 or "" }}</td>
+                    <td>{{ row.field_20 or "" }}</td>
+                    <td>{{ row.field_21 or "" }}</td>
                     <td class="hidden_audit_column">{{ row.created_at }}</td>
                     <td class="hidden_audit_column">{{ row.updated_at }}</td>
                     <td class="review_status_cell">
@@ -240,7 +301,12 @@
         return `column_${column_index}`;
     };
 
+    const review_status_column_width_px = 100;
+
     const get_cell_preferred_width = (cell) => {
+        if (cell && cell.classList && cell.classList.contains("review_status_cell")) {
+            return review_status_column_width_px;
+        }
         const input_or_select = cell.querySelector("input, select");
         if (input_or_select) {
             const value_text =
@@ -259,6 +325,13 @@
     const apply_auto_fit_column_widths = () => {
         header_cells.forEach((header_cell, column_index) => {
             if (header_cell.classList.contains("hidden_id_column") || header_cell.classList.contains("hidden_audit_column")) {
+                return;
+            }
+            if (header_cell.classList.contains("review_status_column")) {
+                const w = review_status_column_width_px;
+                header_cell.style.width = `${w}px`;
+                header_cell.style.minWidth = `${w}px`;
+                header_cell.style.maxWidth = `${w}px`;
                 return;
             }
             let preferred_width = measure_text_width(header_cell.textContent || "") + cell_horizontal_padding;
@@ -304,9 +377,15 @@
                 return;
             }
             const min_width = resize_min_width;
-            const next_width = Math.max(min_width, Math.ceil(saved_width));
+            let next_width = Math.max(min_width, Math.ceil(saved_width));
+            if (header_cell.classList.contains("review_status_column")) {
+                next_width = Math.min(132, Math.max(72, next_width));
+            }
             header_cell.style.width = `${next_width}px`;
             header_cell.style.minWidth = `${next_width}px`;
+            if (header_cell.classList.contains("review_status_column")) {
+                header_cell.style.maxWidth = `${next_width}px`;
+            }
             applied = true;
         });
         return applied;
@@ -317,9 +396,15 @@
             return;
         }
         const delta_x = event.clientX - start_x;
-        const next_width = Math.max(active_min_width, start_width + delta_x);
+        let next_width = Math.max(active_min_width, start_width + delta_x);
+        if (active_header_cell.classList.contains("review_status_column")) {
+            next_width = Math.min(132, next_width);
+        }
         active_header_cell.style.width = `${next_width}px`;
         active_header_cell.style.minWidth = `${next_width}px`;
+        if (active_header_cell.classList.contains("review_status_column")) {
+            active_header_cell.style.maxWidth = `${next_width}px`;
+        }
     };
 
     const on_mouse_up = () => {
@@ -342,7 +427,9 @@
         handle.addEventListener("mousedown", (event) => {
             event.preventDefault();
             active_header_cell = header_cell;
-            active_min_width = resize_min_width;
+            active_min_width = header_cell.classList.contains("review_status_column")
+                ? 72
+                : resize_min_width;
             start_x = event.clientX;
             start_width = header_cell.getBoundingClientRect().width;
             document.body.style.cursor = "col-resize";
@@ -1238,6 +1325,9 @@
     const nullable_field_names = new Set([
         "field_01", "field_02", "field_03", "field_04", "field_05",
         "field_06", "field_07", "field_08", "field_09", "field_10",
+        "field_11", "field_12", "field_13", "field_14", "field_15",
+        "field_16", "field_17", "field_18", "field_19", "field_20",
+        "field_21",
         "low_test_started_at", "low_test_ended_at", "low_test_delta",
         "high_test_started_at", "high_test_ended_at", "high_test_delta",
     ]);

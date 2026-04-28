@@ -47,6 +47,7 @@ def initialize_database() -> None:
     _ensure_user_account_columns()
     _migrate_test_result_to_four_key_if_needed()
     _ensure_test_result_columns()
+    _ensure_test_result_submission_key_unique_constraint()
     _ensure_form_submission_columns()
     _backfill_form_submissions()
     _ensure_ui_sample_profiles()
@@ -97,6 +98,18 @@ def _ensure_test_result_columns() -> None:
         "form_submission_id": "TEXT",
         "data_writer_name": "TEXT",
         "is_reviewed": "INTEGER DEFAULT 0",
+        # Additional operational columns (nullable by default)
+        "field_11": "TEXT",
+        "field_12": "TEXT",
+        "field_13": "TEXT",
+        "field_14": "TEXT",
+        "field_15": "TEXT",
+        "field_16": "TEXT",
+        "field_17": "TEXT",
+        "field_18": "TEXT",
+        "field_19": "TEXT",
+        "field_20": "TEXT",
+        "field_21": "TEXT",
     }
     with engine.begin() as connection:
         existing_column_names = {
@@ -124,6 +137,96 @@ def _ensure_test_result_columns() -> None:
                     """
                 )
             )
+
+
+def _ensure_test_result_submission_key_unique_constraint() -> None:
+    with engine.begin() as connection:
+        table_exists = connection.execute(
+            text("SELECT sql FROM sqlite_master WHERE type='table' AND name='test_result' LIMIT 1")
+        ).fetchone()
+        if table_exists is None:
+            return
+        table_sql = str(table_exists[0] or "")
+        if "uq_test_result_submission_key_quintet" in table_sql or (
+            "UNIQUE (form_submission_id, key_1, key_2, key_3, key_4)" in table_sql
+        ):
+            return
+
+        connection.execute(
+            text(
+                """
+                CREATE TABLE test_result__new (
+                    id INTEGER NOT NULL,
+                    key_1 TEXT NOT NULL,
+                    key_2 TEXT NOT NULL,
+                    key_3 TEXT NOT NULL,
+                    key_4 TEXT NOT NULL,
+                    submission_id TEXT,
+                    form_submission_id TEXT,
+                    data_writer_name TEXT,
+                    is_reviewed INTEGER NOT NULL DEFAULT 0,
+                    field_01 TEXT,
+                    field_02 TEXT,
+                    field_03 TEXT,
+                    field_04 TEXT,
+                    field_05 TEXT,
+                    field_06 TEXT,
+                    field_07 TEXT,
+                    field_08 TEXT,
+                    field_09 TEXT,
+                    field_10 TEXT,
+                    field_11 TEXT,
+                    field_12 TEXT,
+                    field_13 TEXT,
+                    field_14 TEXT,
+                    field_15 TEXT,
+                    field_16 TEXT,
+                    field_17 TEXT,
+                    field_18 TEXT,
+                    field_19 TEXT,
+                    field_20 TEXT,
+                    field_21 TEXT,
+                    low_test_started_at DATETIME,
+                    low_test_ended_at DATETIME,
+                    low_test_delta TEXT,
+                    high_test_started_at DATETIME,
+                    high_test_ended_at DATETIME,
+                    high_test_delta TEXT,
+                    created_at DATETIME NOT NULL,
+                    updated_at DATETIME NOT NULL,
+                    PRIMARY KEY (id),
+                    CONSTRAINT uq_test_result_submission_key_quintet
+                        UNIQUE (form_submission_id, key_1, key_2, key_3, key_4)
+                )
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                INSERT INTO test_result__new (
+                    id, key_1, key_2, key_3, key_4, submission_id, form_submission_id, data_writer_name, is_reviewed,
+                    field_01, field_02, field_03, field_04, field_05, field_06, field_07, field_08,
+                    field_09, field_10, field_11, field_12, field_13, field_14, field_15, field_16,
+                    field_17, field_18, field_19, field_20, field_21,
+                    low_test_started_at, low_test_ended_at, low_test_delta,
+                    high_test_started_at, high_test_ended_at, high_test_delta,
+                    created_at, updated_at
+                )
+                SELECT
+                    id, key_1, key_2, key_3, key_4, submission_id, form_submission_id, data_writer_name, is_reviewed,
+                    field_01, field_02, field_03, field_04, field_05, field_06, field_07, field_08,
+                    field_09, field_10, field_11, field_12, field_13, field_14, field_15, field_16,
+                    field_17, field_18, field_19, field_20, field_21,
+                    low_test_started_at, low_test_ended_at, low_test_delta,
+                    high_test_started_at, high_test_ended_at, high_test_delta,
+                    created_at, updated_at
+                FROM test_result
+                """
+            )
+        )
+        connection.execute(text("DROP TABLE test_result"))
+        connection.execute(text("ALTER TABLE test_result__new RENAME TO test_result"))
 
 
 def _migrate_test_result_to_four_key_if_needed() -> None:

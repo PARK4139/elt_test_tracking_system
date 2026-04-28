@@ -27,6 +27,17 @@ class TestResultPartialInput(BaseModel):
     field_08: str | None = None
     field_09: str | None = None
     field_10: str | None = None
+    field_11: str | None = None
+    field_12: str | None = None
+    field_13: str | None = None
+    field_14: str | None = None
+    field_15: str | None = None
+    field_16: str | None = None
+    field_17: str | None = None
+    field_18: str | None = None
+    field_19: str | None = None
+    field_20: str | None = None
+    field_21: str | None = None
 
     low_test_started_at: datetime | None = None
     low_test_ended_at: datetime | None = None
@@ -57,6 +68,17 @@ class TestResultRead(BaseModel):
     field_08: str | None
     field_09: str | None
     field_10: str | None
+    field_11: str | None
+    field_12: str | None
+    field_13: str | None
+    field_14: str | None
+    field_15: str | None
+    field_16: str | None
+    field_17: str | None
+    field_18: str | None
+    field_19: str | None
+    field_20: str | None
+    field_21: str | None
     low_test_started_at: datetime | None
     low_test_ended_at: datetime | None
     low_test_delta: str | None
