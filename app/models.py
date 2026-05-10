@@ -66,11 +66,7 @@ class TestResult(Base):
     __table_args__ = (
         UniqueConstraint(
             "form_submission_id",
-            "key_1",
-            "key_2",
-            "key_3",
-            "key_4",
-            name="uq_test_result_submission_key_quintet",
+            name="uq_test_result_form_submission_id",
         ),
     )
 
@@ -152,6 +148,56 @@ class UiSampleProfile(Base):
     display_name: Mapped[str] = mapped_column(Text, nullable=False)
     phone_number: Mapped[str] = mapped_column(Text, nullable=False)
     password: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=get_utc_now_datetime,
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=get_utc_now_datetime,
+        onupdate=get_utc_now_datetime,
+        nullable=False,
+    )
+
+
+class ChecklistTemplate(Base):
+    __tablename__ = "checklist_template"
+
+    template_name: Mapped[str] = mapped_column(Text, primary_key=True)
+    item_label_01: Mapped[str | None] = mapped_column(Text, nullable=True)
+    item_label_02: Mapped[str | None] = mapped_column(Text, nullable=True)
+    item_label_03: Mapped[str | None] = mapped_column(Text, nullable=True)
+    item_label_04: Mapped[str | None] = mapped_column(Text, nullable=True)
+    item_label_05: Mapped[str | None] = mapped_column(Text, nullable=True)
+    item_label_06: Mapped[str | None] = mapped_column(Text, nullable=True)
+    item_label_07: Mapped[str | None] = mapped_column(Text, nullable=True)
+    item_label_08: Mapped[str | None] = mapped_column(Text, nullable=True)
+    item_label_09: Mapped[str | None] = mapped_column(Text, nullable=True)
+    item_label_10: Mapped[str | None] = mapped_column(Text, nullable=True)
+    item_label_11: Mapped[str | None] = mapped_column(Text, nullable=True)
+    item_label_12: Mapped[str | None] = mapped_column(Text, nullable=True)
+    item_label_13: Mapped[str | None] = mapped_column(Text, nullable=True)
+    item_label_14: Mapped[str | None] = mapped_column(Text, nullable=True)
+    item_label_15: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=get_utc_now_datetime,
+        nullable=False,
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=get_utc_now_datetime,
+        onupdate=get_utc_now_datetime,
+        nullable=False,
+    )
+
+
+class ModelChecklistTemplateMap(Base):
+    __tablename__ = "model_checklist_template_map"
+
+    model_name: Mapped[str] = mapped_column(Text, primary_key=True)
+    template_name: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=get_utc_now_datetime,

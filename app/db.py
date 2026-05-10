@@ -49,9 +49,11 @@ def initialize_database() -> None:
     _ensure_test_result_columns()
     _ensure_test_result_submission_key_unique_constraint()
     _ensure_form_submission_columns()
+    _ensure_checklist_template_columns()
     _backfill_form_submissions()
     _ensure_ui_sample_profiles()
     _ensure_default_dropdown_options()
+    _ensure_default_checklist_templates()
 
 
 def _ensure_user_account_columns() -> None:
@@ -89,6 +91,38 @@ def _ensure_form_submission_columns() -> None:
         if "submitted_at" not in existing_column_names:
             connection.execute(
                 text("ALTER TABLE form_submission ADD COLUMN submitted_at DATETIME")
+            )
+
+
+def _ensure_checklist_template_columns() -> None:
+    with engine.begin() as connection:
+        table_exists = connection.execute(
+            text("SELECT 1 FROM sqlite_master WHERE type='table' AND name='checklist_template' LIMIT 1")
+        ).fetchone()
+        if table_exists is None:
+            return
+        existing_column_names = {
+            row[1] for row in connection.execute(text("PRAGMA table_info(checklist_template)"))
+        }
+        if "item_label_11" not in existing_column_names:
+            connection.execute(
+                text("ALTER TABLE checklist_template ADD COLUMN item_label_11 TEXT")
+            )
+        if "item_label_12" not in existing_column_names:
+            connection.execute(
+                text("ALTER TABLE checklist_template ADD COLUMN item_label_12 TEXT")
+            )
+        if "item_label_13" not in existing_column_names:
+            connection.execute(
+                text("ALTER TABLE checklist_template ADD COLUMN item_label_13 TEXT")
+            )
+        if "item_label_14" not in existing_column_names:
+            connection.execute(
+                text("ALTER TABLE checklist_template ADD COLUMN item_label_14 TEXT")
+            )
+        if "item_label_15" not in existing_column_names:
+            connection.execute(
+                text("ALTER TABLE checklist_template ADD COLUMN item_label_15 TEXT")
             )
 
 
@@ -147,9 +181,23 @@ def _ensure_test_result_submission_key_unique_constraint() -> None:
         if table_exists is None:
             return
         table_sql = str(table_exists[0] or "")
-        if "uq_test_result_submission_key_quintet" in table_sql or (
-            "UNIQUE (form_submission_id, key_1, key_2, key_3, key_4)" in table_sql
+        if "uq_test_result_form_submission_id" in table_sql or (
+            "UNIQUE (form_submission_id)" in table_sql
         ):
+            return
+        duplicate_submission_exists = connection.execute(
+            text(
+                """
+                SELECT 1
+                FROM test_result
+                WHERE form_submission_id IS NOT NULL AND TRIM(form_submission_id) <> ''
+                GROUP BY form_submission_id
+                HAVING COUNT(*) > 1
+                LIMIT 1
+                """
+            )
+        ).fetchone()
+        if duplicate_submission_exists is not None:
             return
 
         connection.execute(
@@ -195,8 +243,8 @@ def _ensure_test_result_submission_key_unique_constraint() -> None:
                     created_at DATETIME NOT NULL,
                     updated_at DATETIME NOT NULL,
                     PRIMARY KEY (id),
-                    CONSTRAINT uq_test_result_submission_key_quintet
-                        UNIQUE (form_submission_id, key_1, key_2, key_3, key_4)
+                    CONSTRAINT uq_test_result_form_submission_id
+                        UNIQUE (form_submission_id)
                 )
                 """
             )
@@ -349,5 +397,15 @@ def _ensure_default_dropdown_options() -> None:
     session = session_local()
     try:
         ensure_default_dropdown_options(session)
+    finally:
+        session.close()
+
+
+def _ensure_default_checklist_templates() -> None:
+    from app.services.checklist_template_service import ensure_default_checklist_templates
+
+    session = session_local()
+    try:
+        ensure_default_checklist_templates(session)
     finally:
         session.close()

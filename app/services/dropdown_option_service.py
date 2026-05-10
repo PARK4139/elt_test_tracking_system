@@ -21,6 +21,9 @@ DEFAULT_DROPDOWN_OPTIONS: dict[str, list[str]] = {
         "에이원옵틱",
     ],
     "key_3": [
+        "HBM-1",
+        "HOCT-1",
+        "HOCT-1F",
         "HRT-7000",
         "HRT-8000",
         "HLM-9000",

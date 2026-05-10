@@ -26,6 +26,7 @@ from app.services.test_result_service import (
     upsert_partial_test_result,
 )
 from app.services.dropdown_option_service import list_dropdown_options_map
+from app.services.checklist_template_service import build_model_template_payload_map
 
 tester_router = APIRouter(prefix="/user", tags=["tester"])
 
@@ -125,6 +126,7 @@ def render_tester_dashboard(
             "current_display_name": current_display_name,
             "current_company_name": current_company_name,
             "dropdown_options_map": dropdown_options_map,
+            "model_checklist_template_payload_map": build_model_template_payload_map(database_session),
         },
     )
 

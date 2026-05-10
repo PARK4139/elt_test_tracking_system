@@ -27,6 +27,16 @@ from app.services.dropdown_option_service import (
     delete_dropdown_option_if_exists,
     list_dropdown_options_for_field,
 )
+from app.services.checklist_template_service import (
+    build_model_template_payload_map,
+    build_template_payload_map,
+    delete_checklist_template,
+    delete_model_checklist_template_map,
+    list_checklist_templates,
+    list_model_checklist_template_maps,
+    upsert_checklist_template,
+    upsert_model_checklist_template_map,
+)
 
 
 admin_router = APIRouter(prefix="/admin", tags=["admin"])
@@ -121,6 +131,15 @@ def _admin_accounts_for_admin(database_session: Session) -> list[UserAccount]:
     )
 
 
+def _admin_checklist_context(database_session: Session) -> dict:
+    return {
+        "checklist_templates": list_checklist_templates(database_session),
+        "checklist_template_payload_map": build_template_payload_map(database_session),
+        "model_checklist_template_maps": list_model_checklist_template_maps(database_session),
+        "model_checklist_template_payload_map": build_model_template_payload_map(database_session),
+    }
+
+
 @admin_router.get("")
 def render_admin_dashboard(
     request: Request,
@@ -150,6 +169,10 @@ def render_admin_dashboard(
             "submission_summaries": _submission_summaries_for_admin(database_session),
             "pending_tester_join_requests": pending_tester_join_requests,
             "admin_accounts_for_management": _admin_accounts_for_admin(database_session),
+            "checklist_templates": list_checklist_templates(database_session),
+            "checklist_template_payload_map": build_template_payload_map(database_session),
+            "model_checklist_template_maps": list_model_checklist_template_maps(database_session),
+            "model_checklist_template_payload_map": build_model_template_payload_map(database_session),
         },
     )
 
@@ -594,6 +617,79 @@ def delete_admin_dropdown_option(
     return RedirectResponse(url="/admin", status_code=303)
 
 
+@admin_router.post("/checklist_templates/save")
+def save_admin_checklist_template(
+    database_session: database_session_dependency,
+    current_role_name: current_role_name_dependency,
+    template_name: str = Form(...),
+    item_labels_text: str = Form(""),
+):
+    _ensure_admin_role(current_role_name)
+    item_labels = [line.strip() for line in str(item_labels_text or "").splitlines()]
+    try:
+        upsert_checklist_template(
+            database_session=database_session,
+            template_name=template_name,
+            item_labels=item_labels,
+        )
+    except ValueError:
+        return RedirectResponse(url="/admin", status_code=303)
+    return RedirectResponse(url="/admin", status_code=303)
+
+
+@admin_router.post("/checklist_templates/delete")
+def delete_admin_checklist_template(
+    database_session: database_session_dependency,
+    current_role_name: current_role_name_dependency,
+    template_name: str = Form(...),
+):
+    _ensure_admin_role(current_role_name)
+    try:
+        delete_checklist_template(
+            database_session=database_session,
+            template_name=template_name,
+        )
+    except ValueError:
+        return RedirectResponse(url="/admin", status_code=303)
+    return RedirectResponse(url="/admin", status_code=303)
+
+
+@admin_router.post("/checklist_templates/model_map/save")
+def save_admin_model_checklist_template_map(
+    database_session: database_session_dependency,
+    current_role_name: current_role_name_dependency,
+    model_name: str = Form(...),
+    template_name: str = Form(...),
+):
+    _ensure_admin_role(current_role_name)
+    try:
+        upsert_model_checklist_template_map(
+            database_session=database_session,
+            model_name=model_name,
+            template_name=template_name,
+        )
+    except ValueError:
+        return RedirectResponse(url="/admin", status_code=303)
+    return RedirectResponse(url="/admin", status_code=303)
+
+
+@admin_router.post("/checklist_templates/model_map/delete")
+def delete_admin_model_checklist_template_map(
+    database_session: database_session_dependency,
+    current_role_name: current_role_name_dependency,
+    model_name: str = Form(...),
+):
+    _ensure_admin_role(current_role_name)
+    try:
+        delete_model_checklist_template_map(
+            database_session=database_session,
+            model_name=model_name,
+        )
+    except ValueError:
+        return RedirectResponse(url="/admin", status_code=303)
+    return RedirectResponse(url="/admin", status_code=303)
+
+
 @admin_router.get("/dropdown_options/{field_name}")
 def list_admin_dropdown_options_by_field(
     field_name: str,
@@ -725,12 +821,17 @@ def list_admin_rows_by_ids(
                 "key_4": _to_text(row.key_4),
                 "field_01": _to_text(row.field_01),
                 "field_02": _to_text(row.field_02),
-                "low_test_started_at": _to_text(row.low_test_started_at),
-                "low_test_ended_at": _to_text(row.low_test_ended_at),
-                "low_test_delta": _to_text(row.low_test_delta),
-                "high_test_started_at": _to_text(row.high_test_started_at),
-                "high_test_ended_at": _to_text(row.high_test_ended_at),
-                "high_test_delta": _to_text(row.high_test_delta),
+                "field_03": _to_text(row.field_03),
+                "field_04": _to_text(row.field_04),
+                "field_05": _to_text(row.field_05),
+                "field_06": _to_text(row.field_06),
+                "field_07": _to_text(row.field_07),
+                "field_10": _to_text(row.field_10),
+                "field_11": _to_text(row.field_11),
+                "field_12": _to_text(row.field_12),
+                "field_13": _to_text(row.field_13),
+                "field_14": _to_text(row.field_14),
+                "field_18": _to_text(row.field_18),
                 "is_reviewed": bool(row.is_reviewed),
                 "created_at": _to_text(row.created_at),
                 "updated_at": _to_text(row.updated_at),

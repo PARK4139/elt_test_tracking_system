@@ -69,23 +69,20 @@ def _upsert_partial_test_result_internal(
     key_3 = _strip_if_string(test_result_partial_input.key_3)
     key_4 = _strip_if_string(test_result_partial_input.key_4)
     form_submission_id = _strip_if_string(test_result_partial_input.form_submission_id)
-    if not key_1 or not key_2 or not key_3 or not key_4:
-        raise ValueError("key_1, key_2, key_3, and key_4 must be non-empty after trimming.")
+    if not key_1 or not key_2:
+        raise ValueError("key_1 and key_2 must be non-empty after trimming.")
     if not form_submission_id:
         raise ValueError("form_submission_id is required.")
 
     existing_test_result = database_session.scalar(
         select(TestResult).where(
             TestResult.form_submission_id == form_submission_id,
-            TestResult.key_1 == key_1,
-            TestResult.key_2 == key_2,
-            TestResult.key_3 == key_3,
-            TestResult.key_4 == key_4,
         )
     )
 
     if existing_test_result is None:
         existing_test_result = TestResult(
+            form_submission_id=form_submission_id,
             key_1=key_1,
             key_2=key_2,
             key_3=key_3,
@@ -100,6 +97,11 @@ def _upsert_partial_test_result_internal(
         if new_value is not None:
             setattr(existing_test_result, field_name, new_value)
 
+    existing_test_result.key_1 = key_1
+    existing_test_result.key_2 = key_2
+    existing_test_result.key_3 = key_3
+    existing_test_result.key_4 = key_4
+
     # enforce: form_submission_id must always be present for new writes
     if not (existing_test_result.form_submission_id or "").strip():
         raise ValueError("form_submission_id is required.")
@@ -112,7 +114,7 @@ def _upsert_partial_test_result_internal(
         except IntegrityError as exception:
             database_session.rollback()
             raise ValueError(
-                "A row with the same form_submission_id, key_1, key_2, key_3, key_4 already exists."
+                "A row with the same form_submission_id already exists."
             ) from exception
         database_session.refresh(existing_test_result)
     return existing_test_result
@@ -302,7 +304,7 @@ def save_all_test_results_atomically(
     except IntegrityError as exception:
         database_session.rollback()
         raise ValueError(
-            "A row with the same form_submission_id, key_1, key_2, key_3, key_4 already exists."
+            "A row with the same form_submission_id already exists."
         ) from exception
     except Exception:
         database_session.rollback()

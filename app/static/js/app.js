@@ -477,6 +477,12 @@
     );
     const save_validation_notice = document.getElementById("save_validation_notice");
     const tester_dropdown_options_json = document.getElementById("tester_dropdown_options_json");
+    const tester_model_checklist_template_payload_map_json = document.getElementById(
+        "tester_model_checklist_template_payload_map_json"
+    );
+    const tester_checklist_modal = document.getElementById("tester_checklist_modal");
+    const tester_checklist_modal_body = document.getElementById("tester_checklist_modal_body");
+    const save_tester_checklist_modal_button = document.getElementById("save_tester_checklist_modal_button");
     const pending_deleted_row_ids = new Set();
 
     if (!tester_grid_body || !save_validation_notice) {
@@ -574,17 +580,49 @@
             dropdown_options_map = {};
         }
     }
+    let model_checklist_template_payload_map = {};
+    if (tester_model_checklist_template_payload_map_json) {
+        try {
+            model_checklist_template_payload_map = JSON.parse(
+                tester_model_checklist_template_payload_map_json.textContent || "{}"
+            );
+        } catch (_error) {
+            model_checklist_template_payload_map = {};
+        }
+    }
+    const checklist_slot_field_names = [
+        "key_3",
+        "key_4",
+        "field_01",
+        "field_02",
+        "field_03",
+        "field_04",
+        "field_05",
+        "field_06",
+        "field_07",
+        "field_10",
+        "field_11",
+        "field_12",
+        "field_13",
+        "field_14",
+    ];
 
     // NOTE: field_names are optional fields that can be saved when present.
     // Only a small subset is required to allow autosave/submission flow.
     const field_names = [
         "field_01", // 월 (required)
         "field_02", // 검사대수 (required)
-        "field_03", // PASS / FAIL1 (optional)
-        "field_04", // PASS / FAIL2 (optional)
-        "field_05", // 불량내용 (optional)
-        "field_06", // 확인사항 (optional)
-        "field_07", // 조치사항 (optional)
+        "field_03",
+        "field_04",
+        "field_05",
+        "field_06",
+        "field_07",
+        "field_10",
+        "field_11",
+        "field_12",
+        "field_13",
+        "field_14",
+        "field_18",
     ];
     const required_field_names = ["key_1", "key_2", "key_3", "key_4", "field_01", "field_02"];
     const field_label_map = {
@@ -594,19 +632,22 @@
         key_4: "공정번호",
         field_01: "월",
         field_02: "검사대수",
-        field_03: "PASS / FAIL1",
-        field_04: "PASS / FAIL2",
-        field_05: "불량내용",
-        field_06: "확인사항",
-        field_07: "조치사항",
+        field_03: "시험 항목 05",
+        field_04: "시험 항목 06",
+        field_05: "시험 항목 07",
+        field_06: "시험 항목 08",
+        field_07: "시험 항목 09",
+        field_10: "시험 항목 10",
+        field_11: "시험 항목 11",
+        field_12: "시험 항목 12",
+        field_13: "시험 항목 13",
+        field_14: "시험 항목 14",
+        field_18: "시험 항목 15",
     };
-    const time_field_definitions = [
-        { selector: ".low_test_started_at_cell", label: "저온 투입일" },
-        { selector: ".low_test_ended_at_cell", label: "저온 완료일" },
-        { selector: ".high_test_started_at_cell", label: "고온 투입일" },
-        { selector: ".high_test_ended_at_cell", label: "고온 완료일" },
-    ];
+    const time_field_definitions = [];
     const accepted_time_format_hint = "YYYY-MM-DD (요일) HH:mm:ss";
+    const checklist_modal_field_order = [...checklist_slot_field_names];
+    let current_checklist_modal_row = null;
 
     const read_error_detail = async (response) => {
         try {
@@ -621,10 +662,12 @@
     };
 
     const set_action_buttons_disabled = (row_element, disabled) => {
-        row_element.querySelector(".low_test_start_button").disabled = disabled;
-        row_element.querySelector(".low_test_end_button").disabled = disabled;
-        row_element.querySelector(".high_test_start_button").disabled = disabled;
-        row_element.querySelector(".high_test_end_button").disabled = disabled;
+        [".low_test_start_button", ".low_test_end_button", ".high_test_start_button", ".high_test_end_button"].forEach((selector) => {
+            const button = row_element.querySelector(selector);
+            if (button) {
+                button.disabled = disabled;
+            }
+        });
     };
 
     const get_completion_flag = (row_element, dataset_key, input_selector) => {
@@ -666,12 +709,155 @@
         });
     };
 
+    const get_checklist_template_payload_for_model = (model_name) => {
+        const normalized_model_name = String(model_name || "").trim();
+        return model_checklist_template_payload_map[normalized_model_name] || {
+            template_name: "",
+            item_labels: [],
+        };
+    };
+
+    const get_checklist_open_button = (row_element) =>
+        row_element.querySelector(".open_checklist_modal_button");
+
+    const update_checklist_button_label = (row_element) => {
+        const button = get_checklist_open_button(row_element);
+        if (!button) {
+            return;
+        }
+        const label_span = button.querySelector(".checklist_template_name_cell_value");
+        const template_payload = get_checklist_template_payload_for_model(
+            read_trimmed_value(row_element, "key_3")
+        );
+        const template_name = String(template_payload.template_name || "").trim();
+        if (!label_span) {
+            button.textContent = template_name || "시험체크리스트 열기";
+            return;
+        }
+        if (template_name) {
+            label_span.textContent = template_name;
+            label_span.classList.remove("is_placeholder");
+        } else {
+            label_span.textContent = "시험체크리스트 열기";
+            label_span.classList.add("is_placeholder");
+        }
+    };
+
+    const apply_checklist_template_to_row = (row_element) => {
+        if (!row_element) {
+            return;
+        }
+        const template_payload = get_checklist_template_payload_for_model(
+            read_trimmed_value(row_element, "key_3")
+        );
+        const template_name = String(template_payload.template_name || "").trim();
+        const item_labels = Array.isArray(template_payload.item_labels)
+            ? template_payload.item_labels
+            : [];
+        const template_name_cell = row_element.querySelector(".checklist_template_name_cell_value");
+        if (template_name_cell) {
+            if (template_name) {
+                template_name_cell.textContent = template_name;
+                template_name_cell.classList.remove("is_placeholder");
+            } else {
+                template_name_cell.textContent = "시험체크리스트 열기";
+                template_name_cell.classList.add("is_placeholder");
+            }
+        }
+        checklist_slot_field_names.forEach((field_name, index) => {
+            const input = row_element.querySelector(`[data-field="${field_name}"]`);
+            if (!input) {
+                return;
+            }
+            const label = String(item_labels[index] || "").trim() || `시험 항목 ${String(index + 1).padStart(2, "0")}`;
+            if ("placeholder" in input) {
+                input.placeholder = label;
+            }
+            if (input.tagName === "SELECT" && input.options && input.options.length > 0) {
+                input.options[0].textContent = label;
+            }
+            input.setAttribute("title", label);
+        });
+        update_checklist_button_label(row_element);
+    };
+
+    const build_checklist_modal_field_html = (field_name, label, source_element) => {
+        const safe_label = String(label || "").replace(/"/g, "&quot;");
+        const safe_value = String((source_element && "value" in source_element ? source_element.value : "") || "").replace(/"/g, "&quot;");
+        if (source_element && source_element.tagName === "SELECT") {
+            const option_html = Array.from(source_element.options)
+                .map((option) => {
+                    const option_value = String(option.value || "").replace(/"/g, "&quot;");
+                    const option_label = String(option.textContent || "").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+                    const selected = String(option.value || "") === String(source_element.value || "") ? " selected" : "";
+                    return `<option value="${option_value}"${selected}>${option_label}</option>`;
+                })
+                .join("");
+            return `
+                <label>${label}</label>
+                <select data-modal-field="${field_name}" title="${safe_label}">${option_html}</select>
+            `;
+        }
+        return `
+            <label>${label}</label>
+            <input data-modal-field="${field_name}" type="text" value="${safe_value}" placeholder="${safe_label}" title="${safe_label}">
+        `;
+    };
+
+    const open_tester_checklist_modal = (row_element) => {
+        if (!tester_checklist_modal || !tester_checklist_modal_body || !row_element) {
+            return;
+        }
+        current_checklist_modal_row = row_element;
+        const template_payload = get_checklist_template_payload_for_model(
+            read_trimmed_value(row_element, "key_3")
+        );
+        const item_labels = Array.isArray(template_payload.item_labels) ? template_payload.item_labels : [];
+        tester_checklist_modal_body.innerHTML = checklist_modal_field_order
+            .map((field_name, index) => {
+                const source_element = row_element.querySelector(`[data-field="${field_name}"]`);
+                const fallback_label = field_label_map[field_name] || `시험 항목 ${String(index + 1).padStart(2, "0")}`;
+                const label = String(item_labels[index] || "").trim() || fallback_label;
+                return `<div class="form_stack">${build_checklist_modal_field_html(field_name, label, source_element)}</div>`;
+            })
+            .join("");
+        tester_checklist_modal.style.display = "flex";
+        tester_checklist_modal.classList.add("is_open");
+        tester_checklist_modal.setAttribute("aria-hidden", "false");
+    };
+
+    const close_tester_checklist_modal = () => {
+        if (!tester_checklist_modal) {
+            return;
+        }
+        tester_checklist_modal.classList.remove("is_open");
+        tester_checklist_modal.setAttribute("aria-hidden", "true");
+        tester_checklist_modal.style.display = "none";
+        current_checklist_modal_row = null;
+    };
+
     const update_test_action_buttons = (row_element) => {
+        const low_test_started_input = row_element.querySelector(".low_test_started_at_cell");
+        const low_test_ended_input = row_element.querySelector(".low_test_ended_at_cell");
+        const high_test_started_input = row_element.querySelector(".high_test_started_at_cell");
+        const high_test_ended_input = row_element.querySelector(".high_test_ended_at_cell");
+        const low_test_start_button = row_element.querySelector(".low_test_start_button");
+        const low_test_end_button = row_element.querySelector(".low_test_end_button");
+        const high_test_start_button = row_element.querySelector(".high_test_start_button");
+        const high_test_end_button = row_element.querySelector(".high_test_end_button");
+        if (
+            !low_test_started_input ||
+            !low_test_ended_input ||
+            !high_test_started_input ||
+            !high_test_ended_input ||
+            !low_test_start_button ||
+            !low_test_end_button ||
+            !high_test_start_button ||
+            !high_test_end_button
+        ) {
+            return;
+        }
         if (is_row_review_locked(row_element)) {
-            const low_test_start_button = row_element.querySelector(".low_test_start_button");
-            const low_test_end_button = row_element.querySelector(".low_test_end_button");
-            const high_test_start_button = row_element.querySelector(".high_test_start_button");
-            const high_test_end_button = row_element.querySelector(".high_test_end_button");
             if (low_test_start_button) low_test_start_button.style.display = "none";
             if (low_test_end_button) low_test_end_button.style.display = "none";
             if (high_test_start_button) high_test_start_button.style.display = "none";
@@ -699,16 +885,6 @@
             ".high_test_ended_at_cell"
         );
 
-        const low_test_started_input = row_element.querySelector(".low_test_started_at_cell");
-        const low_test_ended_input = row_element.querySelector(".low_test_ended_at_cell");
-        const high_test_started_input = row_element.querySelector(".high_test_started_at_cell");
-        const high_test_ended_input = row_element.querySelector(".high_test_ended_at_cell");
-
-        const low_test_start_button = row_element.querySelector(".low_test_start_button");
-        const low_test_end_button = row_element.querySelector(".low_test_end_button");
-        const high_test_start_button = row_element.querySelector(".high_test_start_button");
-        const high_test_end_button = row_element.querySelector(".high_test_end_button");
-
         low_test_started_input.style.display = low_test_started ? "" : "none";
         low_test_ended_input.style.display = low_test_ended ? "" : "none";
         high_test_started_input.style.display = high_test_started ? "" : "none";
@@ -726,23 +902,14 @@
     };
 
     const create_row_element = () => {
-        const build_select_html = (field_name) => {
+        const build_select_html = (field_name, empty_label = "") => {
             const option_values = Array.isArray(dropdown_options_map[field_name])
                 ? dropdown_options_map[field_name]
                 : [];
             const option_html = option_values
                 .map((option_value) => `<option value="${option_value}">${option_value}</option>`)
                 .join("");
-            return `<select data-field="${field_name}"><option value=""></option>${option_html}</select>`;
-        };
-        const build_pass_fail_select_html = (field_name) => {
-            return `
-                <select data-field="${field_name}">
-                    <option value=""></option>
-                    <option value="PASS">PASS</option>
-                    <option value="FAIL">FAIL</option>
-                </select>
-            `.trim();
+            return `<select data-field="${field_name}" title="${empty_label}"><option value="">${empty_label}</option>${option_html}</select>`;
         };
 
         const active_sid = getActiveFormSubmissionId();
@@ -764,41 +931,26 @@
                 <input type="hidden" data-field="key_2" value="${current_display_name}">
                 <span class="data_writer_name_cell_value delta_value${current_display_name ? "" : " is_placeholder"}">${current_display_name || "자동계산"}</span>
             </td>
-            <td>${build_select_html("key_3")}</td>
-            <td>${build_select_html("key_4")}</td>
-            <td>${build_select_html("field_01")}</td>
-            <td>${build_select_html("field_02")}</td>
-            <td class="test_action_td">
-                <div class="test_action_cell">
-                    <input class="low_test_started_at_cell test_timestamp_input" value="">
-                    <button type="button" class="low_test_start_button">저온시험 시작</button>
-                </div>
+            <td>
+                <button type="button" class="open_checklist_modal_button project_standard_button">
+                    <span class="checklist_template_name_cell_value delta_value is_placeholder">시험체크리스트 열기</span>
+                </button>
             </td>
-            <td class="test_action_td">
-                <div class="test_action_cell">
-                    <input class="low_test_ended_at_cell test_timestamp_input" value="">
-                    <button type="button" class="low_test_end_button">저온시험 종료</button>
-                </div>
-            </td>
-            <td class="low_test_delta_cell"><span class="delta_value is_placeholder">자동계산</span></td>
-            <td>${build_pass_fail_select_html("field_03")}</td>
-            <td class="test_action_td">
-                <div class="test_action_cell">
-                    <input class="high_test_started_at_cell test_timestamp_input" value="">
-                    <button type="button" class="high_test_start_button">고온시험 시작</button>
-                </div>
-            </td>
-            <td class="test_action_td">
-                <div class="test_action_cell">
-                    <input class="high_test_ended_at_cell test_timestamp_input" value="">
-                    <button type="button" class="high_test_end_button">고온시험 종료</button>
-                </div>
-            </td>
-            <td class="high_test_delta_cell"><span class="delta_value is_placeholder">자동계산</span></td>
-            <td>${build_pass_fail_select_html("field_04")}</td>
-            <td><input data-field="field_05" value=""></td>
-            <td><input data-field="field_06" value=""></td>
-            <td><input data-field="field_07" value=""></td>
+            <td class="hidden_checklist_column" hidden>${build_select_html("key_3", "모델명")}</td>
+            <td class="hidden_checklist_column" hidden>${build_select_html("key_4", "공정번호")}</td>
+            <td class="hidden_checklist_column" hidden>${build_select_html("field_01", "월")}</td>
+            <td class="hidden_checklist_column" hidden>${build_select_html("field_02", "검사대수")}</td>
+            <td class="hidden_checklist_column" hidden><input data-field="field_03" value="" placeholder="시험 항목 05"></td>
+            <td class="hidden_checklist_column" hidden><input data-field="field_04" value="" placeholder="시험 항목 06"></td>
+            <td class="hidden_checklist_column" hidden><input data-field="field_05" value="" placeholder="시험 항목 07"></td>
+            <td class="hidden_checklist_column" hidden><input data-field="field_06" value="" placeholder="시험 항목 08"></td>
+            <td class="hidden_checklist_column" hidden><input data-field="field_07" value="" placeholder="시험 항목 09"></td>
+            <td class="hidden_checklist_column" hidden><input data-field="field_10" value="" placeholder="시험 항목 10"></td>
+            <td class="hidden_checklist_column" hidden><input data-field="field_11" value="" placeholder="시험 항목 11"></td>
+            <td class="hidden_checklist_column" hidden><input data-field="field_12" value="" placeholder="시험 항목 12"></td>
+            <td class="hidden_checklist_column" hidden><input data-field="field_13" value="" placeholder="시험 항목 13"></td>
+            <td class="hidden_checklist_column" hidden><input data-field="field_14" value="" placeholder="시험 항목 14"></td>
+            <td class="hidden_checklist_column" hidden><input data-field="field_18" value="" placeholder="시험 항목 15"></td>
         `;
 
         const month_select = row_element.querySelector('select[data-field="field_01"]');
@@ -830,6 +982,7 @@
             }
             count_select.value = default_count_value;
         }
+        apply_checklist_template_to_row(row_element);
         return row_element;
     };
 
@@ -868,50 +1021,23 @@
 
         for (const field_name of field_names) {
             const input = row_element.querySelector(`[data-field="${field_name}"]`);
-            payload[field_name] = input.value;
+            payload[field_name] = input ? input.value : "";
         }
 
-        const low_test_started_at_text = read_cell_value(
-            row_element.querySelector(".low_test_started_at_cell")
-        );
-        const low_test_ended_at_text = read_cell_value(
-            row_element.querySelector(".low_test_ended_at_cell")
-        );
-        const high_test_started_at_text = read_cell_value(
-            row_element.querySelector(".high_test_started_at_cell")
-        );
-        const high_test_ended_at_text = read_cell_value(
-            row_element.querySelector(".high_test_ended_at_cell")
-        );
-
-        const parsed_low_started = low_test_started_at_text
-            ? parse_datetime_text(low_test_started_at_text)
-            : null;
-        payload.low_test_started_at = parsed_low_started ? parsed_low_started.toISOString() : null;
-        const parsed_low_ended = low_test_ended_at_text
-            ? parse_datetime_text(low_test_ended_at_text)
-            : null;
-        payload.low_test_ended_at = parsed_low_ended ? parsed_low_ended.toISOString() : null;
-        const parsed_high_started = high_test_started_at_text
-            ? parse_datetime_text(high_test_started_at_text)
-            : null;
-        payload.high_test_started_at = parsed_high_started ? parsed_high_started.toISOString() : null;
-        const parsed_high_ended = high_test_ended_at_text
-            ? parse_datetime_text(high_test_ended_at_text)
-            : null;
-        payload.high_test_ended_at = parsed_high_ended ? parsed_high_ended.toISOString() : null;
-
-        const low_delta_node = row_element.querySelector(".low_test_delta_cell .delta_value");
-        const low_test_delta_text = ((low_delta_node && low_delta_node.textContent) || "").trim();
-        const high_delta_node = row_element.querySelector(".high_test_delta_cell .delta_value");
-        const high_test_delta_text = ((high_delta_node && high_delta_node.textContent) || "").trim();
-        payload.low_test_delta = low_test_delta_text === "자동계산" ? null : low_test_delta_text;
-        payload.high_test_delta = high_test_delta_text === "자동계산" ? null : high_test_delta_text;
+        payload.low_test_started_at = null;
+        payload.low_test_ended_at = null;
+        payload.high_test_started_at = null;
+        payload.high_test_ended_at = null;
+        payload.low_test_delta = null;
+        payload.high_test_delta = null;
 
         return payload;
     };
 
     const trim_timestamp_input = (input_element) => {
+        if (!input_element) {
+            return "";
+        }
         const trimmed_value = (input_element.value || "").trim();
         input_element.value = trimmed_value;
         return trimmed_value;
@@ -967,6 +1093,9 @@
     };
 
     const set_timestamp_cell = (cell_element, timestamp_info) => {
+        if (!cell_element) {
+            return;
+        }
         if ("value" in cell_element) {
             cell_element.value = timestamp_info.display;
         } else {
@@ -976,6 +1105,9 @@
     };
 
     const read_cell_value = (cell_element) => {
+        if (!cell_element) {
+            return "";
+        }
         if ("value" in cell_element) {
             return cell_element.value.trim();
         }
@@ -996,6 +1128,9 @@
     };
 
     const normalize_timestamp_cell_display = (cell_element) => {
+        if (!cell_element) {
+            return;
+        }
         const parsed = parse_datetime_from_cell(cell_element);
         if (!parsed) {
             return;
@@ -1018,6 +1153,9 @@
         const started_cell = row_element.querySelector(`.${test_type}_started_at_cell`);
         const ended_cell = row_element.querySelector(`.${test_type}_ended_at_cell`);
         const delta_cell = row_element.querySelector(`.${test_type}_delta_cell`);
+        if (!started_cell || !ended_cell || !delta_cell) {
+            return;
+        }
         const delta_value = delta_cell.querySelector(".delta_value") || delta_cell;
         const started_at = parse_datetime_from_cell(started_cell);
         const ended_at = parse_datetime_from_cell(ended_cell);
@@ -1052,9 +1190,9 @@
         if (!has_any_value) {
             return true;
         }
-        if (!payload.key_1 || !payload.key_2 || !payload.key_3 || !payload.key_4) {
+        if (!payload.key_1 || !payload.key_2 || !payload.key_3 || !payload.key_4 || !payload.field_01 || !payload.field_02) {
             openMessageModal(
-                `${row_index_for_message}번째 행: 업체명, 양식제출자, 모델명, 공정번호는 모두 필수입니다.`
+                `${row_index_for_message}번째 행: 업체명, 양식제출자, 모델명, 공정번호, 월, 검사대수는 모두 필수입니다.`
             );
             return false;
         }
@@ -1279,6 +1417,14 @@
         const low_test_ended_cell = row_element.querySelector(".low_test_ended_at_cell");
         const high_test_started_cell = row_element.querySelector(".high_test_started_at_cell");
         const high_test_ended_cell = row_element.querySelector(".high_test_ended_at_cell");
+        if (
+            !low_test_started_cell ||
+            !low_test_ended_cell ||
+            !high_test_started_cell ||
+            !high_test_ended_cell
+        ) {
+            return;
+        }
 
         if (action_path === "low_test/end") {
             const started_at = parse_datetime_from_cell(low_test_started_cell);
@@ -1349,9 +1495,15 @@
         const editable_fields = row_element.querySelectorAll("select[data-field], input[data-field]");
         for (const editable_field of editable_fields) {
             editable_field.addEventListener("change", () => {
+                if (editable_field.dataset.field === "key_3") {
+                    apply_checklist_template_to_row(row_element);
+                }
                 queueAutoSave();
             });
             editable_field.addEventListener("input", () => {
+                if (editable_field.dataset.field === "key_3") {
+                    apply_checklist_template_to_row(row_element);
+                }
                 queueAutoSave();
             });
         }
@@ -1359,36 +1511,56 @@
         render_delta_from_timestamps(row_element, "low_test");
         render_delta_from_timestamps(row_element, "high_test");
         update_test_action_buttons(row_element);
+        apply_checklist_template_to_row(row_element);
+        const open_checklist_modal_button = row_element.querySelector(".open_checklist_modal_button");
+        if (open_checklist_modal_button) {
+            open_checklist_modal_button.addEventListener("click", () => {
+                open_tester_checklist_modal(row_element);
+            });
+        }
 
-        row_element
-            .querySelector(".low_test_start_button")
-            .addEventListener("click", async () => {
+        const low_test_start_button = row_element.querySelector(".low_test_start_button");
+        if (low_test_start_button) {
+            low_test_start_button.addEventListener("click", async () => {
                 await post_test_action(row_element, "low_test/start");
                 queueAutoSave();
             });
-        row_element
-            .querySelector(".low_test_end_button")
-            .addEventListener("click", async () => {
+        }
+        const low_test_end_button = row_element.querySelector(".low_test_end_button");
+        if (low_test_end_button) {
+            low_test_end_button.addEventListener("click", async () => {
                 await post_test_action(row_element, "low_test/end");
                 queueAutoSave();
             });
-        row_element
-            .querySelector(".high_test_start_button")
-            .addEventListener("click", async () => {
+        }
+        const high_test_start_button = row_element.querySelector(".high_test_start_button");
+        if (high_test_start_button) {
+            high_test_start_button.addEventListener("click", async () => {
                 await post_test_action(row_element, "high_test/start");
                 queueAutoSave();
             });
-        row_element
-            .querySelector(".high_test_end_button")
-            .addEventListener("click", async () => {
+        }
+        const high_test_end_button = row_element.querySelector(".high_test_end_button");
+        if (high_test_end_button) {
+            high_test_end_button.addEventListener("click", async () => {
                 await post_test_action(row_element, "high_test/end");
                 queueAutoSave();
             });
+        }
     };
 
     if (add_row_button) {
-        add_row_button.addEventListener("click", () => {
+        add_row_button.addEventListener("click", async () => {
             clear_non_modal_notice();
+            const existing_rows = list_editable_rows();
+            if (existing_rows.length > 0) {
+                openMessageModal("양식제출ID 기준으로 1행만 작성할 수 있습니다. 기존 행을 수정해 주세요.");
+                return;
+            }
+            const active_submission_id = await create_submission_id_if_missing(false);
+            if (!active_submission_id) {
+                return;
+            }
             const row_element = create_row_element();
             tester_grid_body.appendChild(row_element);
             bind_compact_width_behavior(row_element);
@@ -1629,6 +1801,10 @@
             row_payload.form_submission_id = row_submission;
             rows_payload.push(row_payload);
         }
+        if (rows_payload.length > 1) {
+            openMessageModal("양식제출ID 기준으로 1행만 저장할 수 있습니다. 1개의 행만 남겨 주세요.");
+            return false;
+        }
 
         try {
             const response = await fetch("/user/rows/save_all", {
@@ -1693,6 +1869,24 @@
     for (const row_element of existing_rows) {
         bind_compact_width_behavior(row_element);
         bind_row_actions(row_element);
+    }
+    if (save_tester_checklist_modal_button) {
+        save_tester_checklist_modal_button.addEventListener("click", () => {
+            if (!current_checklist_modal_row || !tester_checklist_modal_body) {
+                return;
+            }
+            checklist_modal_field_order.forEach((field_name) => {
+                const modal_field = tester_checklist_modal_body.querySelector(`[data-modal-field="${field_name}"]`);
+                const row_field = current_checklist_modal_row.querySelector(`[data-field="${field_name}"]`);
+                if (!modal_field || !row_field || !("value" in modal_field) || !("value" in row_field)) {
+                    return;
+                }
+                row_field.value = modal_field.value;
+            });
+            apply_checklist_template_to_row(current_checklist_modal_row);
+            close_tester_checklist_modal();
+            queueAutoSave();
+        });
     }
     const lock_reviewed_rows_from_server = async () => {
         const all_rows = Array.from(tester_grid_body.querySelectorAll("tr.editable_row"));

@@ -23,6 +23,7 @@
             <button type="button" class="admin_feature_filter_button" data-feature-target="admin_manage">OPTION 2. 관리자 등록 관리</button>
             <button type="button" class="admin_feature_filter_button" data-feature-target="approve_join">OPTION 3. 업체 등록 관리</button>
             <button type="button" class="admin_feature_filter_button" data-feature-target="dropdown_manage">OPTION 4. 드롭다운 항목 관리</button>
+            <button type="button" class="admin_feature_filter_button" data-feature-target="checklist_manage">OPTION 5. 시험체크리스트양식 관리</button>
         </div>
     </div>
 </div>
@@ -38,47 +39,22 @@
             <button id="admin_append_excel_button" type="button" class="project_standard_button">기존엑셀에 데이터 추가</button>
         </div>
     </div>
+    <script id="admin_model_checklist_template_payload_map_json" type="application/json">{{ model_checklist_template_payload_map|default({}, true)|tojson }}</script>
     <div class="tester_table_wrap">
         <table id="admin_grid_table" class="basic_table">
             <thead>
                 <tr>
-                    <th>행 선택</th>
-                    <th>양식제출ID</th>
-                    <th class="hidden_id_column">ID</th>
-                    <th>업체명</th>
-                    <th>양식제출자</th>
-                    <th>모델명</th>
-                    <th>공정번호</th>
-                    <th>월</th>
-                    <th>검사대수</th>
-                    <th>저온 투입일</th>
-                    <th>저온 완료일</th>
-                    <th>저온 시간</th>
-                    <th>PASS / FAIL1</th>
-                    <th>고온 투입일</th>
-                    <th>고온 완료일</th>
-                    <th>고온 시간</th>
-                    <th>PASS / FAIL2</th>
-                    <th>불량내용</th>
-                    <th>확인사항</th>
-                    <th>조치사항</th>
-                    <th>발생구분</th>
-                    <th>원인구분</th>
-                    <th>불량유형</th>
-                    <th>원인 / 조치</th>
-                    <th>적용시점</th>
-                    <th>초품 ECO No.</th>
-                    <th>비고</th>
-                    <th>검사수량</th>
-                    <th>불량수량</th>
-                    <th>ST</th>
-                    <th>rr</th>
-                    <th>임율</th>
-                    <th>비용</th>
-                    <th class="hidden_audit_column">데이터생성시각</th>
-                    <th class="hidden_audit_column">데이터수정시각</th>
-                    <th class="review_status_column">검토결과</th>
+                    <th rowspan="2">행 선택</th>
+                    <th rowspan="2">양식제출ID</th>
+                    <th rowspan="2" class="hidden_id_column">ID</th>
+                    <th rowspan="2">업체명</th>
+                    <th rowspan="2">양식제출자</th>
+                    <th rowspan="2">시험체크리스트</th>
+                    <th rowspan="2" class="hidden_audit_column">데이터생성시각</th>
+                    <th rowspan="2" class="hidden_audit_column">데이터수정시각</th>
+                    <th rowspan="2" class="review_status_column">검토결과</th>
                 </tr>
+                <tr></tr>
             </thead>
             <tbody>
                 {% for row in recent_test_results %}
@@ -89,46 +65,28 @@
                     <td class="hidden_id_column">{{ row.id }}</td>
                     <td><input data-field="key_1" value="{{ row.key_1 or '' }}"></td>
                     <td><input data-field="key_2" value="{{ row.key_2 or row.data_writer_name or '' }}"></td>
-                    <td><input data-field="key_3" value="{{ row.key_3 or '' }}"></td>
-                    <td><input data-field="key_4" value="{{ row.key_4 or '' }}"></td>
-                    <td><input data-field="field_01" value="{{ row.field_01 or '' }}"></td>
-                    <td><input data-field="field_02" value="{{ row.field_02 or '' }}"></td>
-                    <td><input class="admin_timestamp_input" data-field="low_test_started_at" value="{{ row.low_test_started_at or '' }}"></td>
-                    <td><input class="admin_timestamp_input" data-field="low_test_ended_at" value="{{ row.low_test_ended_at or '' }}"></td>
-                    <td><input data-field="low_test_delta" value="{{ row.low_test_delta or '' }}" placeholder="자동계산" readonly></td>
                     <td>
-                        <select data-field="field_03">
-                            <option value=""></option>
-                            <option value="PASS" {% if (row.field_03 or "") == "PASS" %}selected{% endif %}>PASS</option>
-                            <option value="FAIL" {% if (row.field_03 or "") == "FAIL" %}selected{% endif %}>FAIL</option>
-                        </select>
+                        <button type="button" class="admin_open_checklist_modal_button project_standard_button">
+                            <span
+                                class="admin_checklist_template_name_cell_value delta_value{% if not (model_checklist_template_payload_map|default({}, true)).get((row.key_3 or ''), {}).get('template_name') %} is_placeholder{% endif %}"
+                            >{{ (model_checklist_template_payload_map|default({}, true)).get((row.key_3 or ''), {}).get("template_name", "시험체크리스트 열기") }}</span>
+                        </button>
                     </td>
-                    <td><input class="admin_timestamp_input" data-field="high_test_started_at" value="{{ row.high_test_started_at or '' }}"></td>
-                    <td><input class="admin_timestamp_input" data-field="high_test_ended_at" value="{{ row.high_test_ended_at or '' }}"></td>
-                    <td><input data-field="high_test_delta" value="{{ row.high_test_delta or '' }}" placeholder="자동계산" readonly></td>
-                    <td>
-                        <select data-field="field_04">
-                            <option value=""></option>
-                            <option value="PASS" {% if (row.field_04 or "") == "PASS" %}selected{% endif %}>PASS</option>
-                            <option value="FAIL" {% if (row.field_04 or "") == "FAIL" %}selected{% endif %}>FAIL</option>
-                        </select>
-                    </td>
-                    <td><input data-field="field_05" value="{{ row.field_05 or '' }}"></td>
-                    <td><input data-field="field_06" value="{{ row.field_06 or '' }}"></td>
-                    <td><input data-field="field_07" value="{{ row.field_07 or '' }}"></td>
-                    <td><input data-field="field_11" value="{{ row.field_11 or '' }}"></td>
-                    <td><input data-field="field_12" value="{{ row.field_12 or '' }}"></td>
-                    <td><input data-field="field_13" value="{{ row.field_13 or '' }}"></td>
-                    <td><input data-field="field_14" value="{{ row.field_14 or '' }}"></td>
-                    <td><input data-field="field_15" value="{{ row.field_15 or '' }}"></td>
-                    <td><input data-field="field_16" value="{{ row.field_16 or '' }}"></td>
-                    <td><input data-field="field_17" value="{{ row.field_17 or '' }}"></td>
-                    <td><input data-field="field_08" value="{{ row.field_08 or '' }}"></td>
-                    <td><input data-field="field_09" value="{{ row.field_09 or '' }}"></td>
-                    <td><input data-field="field_18" value="{{ row.field_18 or '' }}"></td>
-                    <td><input data-field="field_19" value="{{ row.field_19 or '' }}"></td>
-                    <td><input data-field="field_20" value="{{ row.field_20 or '' }}"></td>
-                    <td><input data-field="field_21" value="{{ row.field_21 or '' }}"></td>
+                    <td class="hidden_checklist_column" hidden><input data-field="key_3" value="{{ row.key_3 or '' }}" placeholder="{{ (model_checklist_template_payload_map|default({}, true)).get((row.key_3 or ''), {}).get('item_labels', ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''])[0] or '모델명' }}"></td>
+                    <td class="hidden_checklist_column" hidden><input data-field="key_4" value="{{ row.key_4 or '' }}" placeholder="{{ (model_checklist_template_payload_map|default({}, true)).get((row.key_3 or ''), {}).get('item_labels', ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''])[1] or '공정번호' }}"></td>
+                    <td class="hidden_checklist_column" hidden><input data-field="field_01" value="{{ row.field_01 or '' }}" placeholder="{{ (model_checklist_template_payload_map|default({}, true)).get((row.key_3 or ''), {}).get('item_labels', ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''])[2] or '월' }}"></td>
+                    <td class="hidden_checklist_column" hidden><input data-field="field_02" value="{{ row.field_02 or '' }}" placeholder="{{ (model_checklist_template_payload_map|default({}, true)).get((row.key_3 or ''), {}).get('item_labels', ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''])[3] or '검사대수' }}"></td>
+                    <td class="hidden_checklist_column" hidden><input data-field="field_03" value="{{ row.field_03 or '' }}" placeholder="{{ (model_checklist_template_payload_map|default({}, true)).get((row.key_3 or ''), {}).get('item_labels', ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''])[4] or '시험 항목 05' }}"></td>
+                    <td class="hidden_checklist_column" hidden><input data-field="field_04" value="{{ row.field_04 or '' }}" placeholder="{{ (model_checklist_template_payload_map|default({}, true)).get((row.key_3 or ''), {}).get('item_labels', ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''])[5] or '시험 항목 06' }}"></td>
+                    <td class="hidden_checklist_column" hidden><input data-field="field_05" value="{{ row.field_05 or '' }}" placeholder="{{ (model_checklist_template_payload_map|default({}, true)).get((row.key_3 or ''), {}).get('item_labels', ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''])[6] or '시험 항목 07' }}"></td>
+                    <td class="hidden_checklist_column" hidden><input data-field="field_06" value="{{ row.field_06 or '' }}" placeholder="{{ (model_checklist_template_payload_map|default({}, true)).get((row.key_3 or ''), {}).get('item_labels', ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''])[7] or '시험 항목 08' }}"></td>
+                    <td class="hidden_checklist_column" hidden><input data-field="field_07" value="{{ row.field_07 or '' }}" placeholder="{{ (model_checklist_template_payload_map|default({}, true)).get((row.key_3 or ''), {}).get('item_labels', ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''])[8] or '시험 항목 09' }}"></td>
+                    <td class="hidden_checklist_column" hidden><input data-field="field_10" value="{{ row.field_10 or '' }}" placeholder="{{ (model_checklist_template_payload_map|default({}, true)).get((row.key_3 or ''), {}).get('item_labels', ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''])[9] or '시험 항목 10' }}"></td>
+                    <td class="hidden_checklist_column" hidden><input data-field="field_11" value="{{ row.field_11 or '' }}" placeholder="{{ (model_checklist_template_payload_map|default({}, true)).get((row.key_3 or ''), {}).get('item_labels', ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''])[10] or '시험 항목 11' }}"></td>
+                    <td class="hidden_checklist_column" hidden><input data-field="field_12" value="{{ row.field_12 or '' }}" placeholder="{{ (model_checklist_template_payload_map|default({}, true)).get((row.key_3 or ''), {}).get('item_labels', ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''])[11] or '시험 항목 12' }}"></td>
+                    <td class="hidden_checklist_column" hidden><input data-field="field_13" value="{{ row.field_13 or '' }}" placeholder="{{ (model_checklist_template_payload_map|default({}, true)).get((row.key_3 or ''), {}).get('item_labels', ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''])[12] or '시험 항목 13' }}"></td>
+                    <td class="hidden_checklist_column" hidden><input data-field="field_14" value="{{ row.field_14 or '' }}" placeholder="{{ (model_checklist_template_payload_map|default({}, true)).get((row.key_3 or ''), {}).get('item_labels', ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''])[13] or '시험 항목 14' }}"></td>
+                    <td class="hidden_checklist_column" hidden><input data-field="field_18" value="{{ row.field_18 or '' }}" placeholder="{{ (model_checklist_template_payload_map|default({}, true)).get((row.key_3 or ''), {}).get('item_labels', ['', '', '', '', '', '', '', '', '', '', '', '', '', '', ''])[14] or '시험 항목 15' }}"></td>
                     <td class="hidden_audit_column">{{ row.created_at }}</td>
                     <td class="hidden_audit_column">{{ row.updated_at }}</td>
                     <td class="review_status_cell">
@@ -158,34 +116,26 @@
                     <td class="hidden_id_column">{{ row.id }}</td>
                     <td>{{ row.key_1 }}</td>
                     <td>{{ row.key_2 or row.data_writer_name or "" }}</td>
-                    <td>{{ row.key_3 }}</td>
-                    <td>{{ row.key_4 or "" }}</td>
-                    <td>{{ row.field_01 or "" }}</td>
-                    <td>{{ row.field_02 or "" }}</td>
-                    <td>{{ row.low_test_started_at or "" }}</td>
-                    <td>{{ row.low_test_ended_at or "" }}</td>
-                    <td>{{ row.low_test_delta or "" }}</td>
-                    <td>{{ row.field_03 or "" }}</td>
-                    <td>{{ row.high_test_started_at or "" }}</td>
-                    <td>{{ row.high_test_ended_at or "" }}</td>
-                    <td>{{ row.high_test_delta or "" }}</td>
-                    <td>{{ row.field_04 or "" }}</td>
-                    <td>{{ row.field_05 or "" }}</td>
-                    <td>{{ row.field_06 or "" }}</td>
-                    <td>{{ row.field_07 or "" }}</td>
-                    <td>{{ row.field_11 or "" }}</td>
-                    <td>{{ row.field_12 or "" }}</td>
-                    <td>{{ row.field_13 or "" }}</td>
-                    <td>{{ row.field_14 or "" }}</td>
-                    <td>{{ row.field_15 or "" }}</td>
-                    <td>{{ row.field_16 or "" }}</td>
-                    <td>{{ row.field_17 or "" }}</td>
-                    <td>{{ row.field_08 or "" }}</td>
-                    <td>{{ row.field_09 or "" }}</td>
-                    <td>{{ row.field_18 or "" }}</td>
-                    <td>{{ row.field_19 or "" }}</td>
-                    <td>{{ row.field_20 or "" }}</td>
-                    <td>{{ row.field_21 or "" }}</td>
+                    <td>
+                        <button type="button" class="admin_open_checklist_modal_button project_standard_button">
+                            <span class="admin_checklist_template_name_cell_value delta_value">{{ (model_checklist_template_payload_map|default({}, true)).get((row.key_3 or ''), {}).get("template_name", "시험체크리스트 열기") }}</span>
+                        </button>
+                    </td>
+                    <td class="hidden_checklist_column" hidden>{{ row.key_3 }}</td>
+                    <td class="hidden_checklist_column" hidden>{{ row.key_4 or "" }}</td>
+                    <td class="hidden_checklist_column" hidden>{{ row.field_01 or "" }}</td>
+                    <td class="hidden_checklist_column" hidden>{{ row.field_02 or "" }}</td>
+                    <td class="hidden_checklist_column" hidden>{{ row.field_03 or "" }}</td>
+                    <td class="hidden_checklist_column" hidden>{{ row.field_04 or "" }}</td>
+                    <td class="hidden_checklist_column" hidden>{{ row.field_05 or "" }}</td>
+                    <td class="hidden_checklist_column" hidden>{{ row.field_06 or "" }}</td>
+                    <td class="hidden_checklist_column" hidden>{{ row.field_07 or "" }}</td>
+                    <td class="hidden_checklist_column" hidden>{{ row.field_10 or "" }}</td>
+                    <td class="hidden_checklist_column" hidden>{{ row.field_11 or "" }}</td>
+                    <td class="hidden_checklist_column" hidden>{{ row.field_12 or "" }}</td>
+                    <td class="hidden_checklist_column" hidden>{{ row.field_13 or "" }}</td>
+                    <td class="hidden_checklist_column" hidden>{{ row.field_14 or "" }}</td>
+                    <td class="hidden_checklist_column" hidden>{{ row.field_18 or "" }}</td>
                     <td class="hidden_audit_column">{{ row.created_at }}</td>
                     <td class="hidden_audit_column">{{ row.updated_at }}</td>
                     <td class="review_status_cell">
@@ -218,6 +168,17 @@
     <div id="admin_save_notice" class="non_modal_notice" aria-live="polite"></div>
     {% endif %}
 </section>
+<div id="admin_checklist_modal" class="guide_modal_overlay" aria-hidden="true">
+    <div class="guide_modal_card" role="dialog" aria-modal="true" aria-labelledby="admin_checklist_modal_title">
+        <div class="section_header_row">
+            <h3 id="admin_checklist_modal_title">시험체크리스트</h3>
+        </div>
+        <div id="admin_checklist_modal_body" class="form_stack"></div>
+        <div class="table_action_bar">
+            <button id="save_admin_checklist_modal_button" type="button">양식 반영 후 닫기</button>
+        </div>
+    </div>
+</div>
 
 <div id="admin_append_excel_modal" class="guide_modal_overlay" aria-hidden="true">
     <div class="guide_modal_card" role="dialog" aria-modal="true" aria-labelledby="admin_append_excel_modal_title">
@@ -240,6 +201,40 @@
     if (!admin_grid_table) {
         return;
     }
+    const admin_model_checklist_template_payload_map_json = document.getElementById(
+        "admin_model_checklist_template_payload_map_json"
+    );
+    const admin_checklist_modal = document.getElementById("admin_checklist_modal");
+    const admin_checklist_modal_body = document.getElementById("admin_checklist_modal_body");
+    const save_admin_checklist_modal_button = document.getElementById("save_admin_checklist_modal_button");
+    let admin_model_checklist_template_payload_map = {};
+    let current_admin_checklist_modal_row = null;
+    if (admin_model_checklist_template_payload_map_json) {
+        try {
+            admin_model_checklist_template_payload_map = JSON.parse(
+                admin_model_checklist_template_payload_map_json.textContent || "{}"
+            );
+        } catch (_error) {
+            admin_model_checklist_template_payload_map = {};
+        }
+    }
+    const admin_checklist_slot_field_names = [
+        "key_3",
+        "key_4",
+        "field_01",
+        "field_02",
+        "field_03",
+        "field_04",
+        "field_05",
+        "field_06",
+        "field_07",
+        "field_10",
+        "field_11",
+        "field_12",
+        "field_13",
+        "field_14",
+        "field_18",
+    ];
     const read_cookie_value = (cookie_name) => {
         const all_cookies = String(document.cookie || "").split(";");
         for (const cookie_part of all_cookies) {
@@ -302,6 +297,97 @@
     };
 
     const review_status_column_width_px = 100;
+
+    const get_admin_checklist_open_button = (row) =>
+        row.querySelector(".admin_open_checklist_modal_button");
+
+    const apply_admin_checklist_template_to_row = (row) => {
+        if (!row) {
+            return;
+        }
+        const model_input = row.querySelector('[data-field="key_3"]');
+        const model_name = model_input ? String(model_input.value || "").trim() : "";
+        const template_payload = admin_model_checklist_template_payload_map[model_name] || {
+            template_name: "",
+            item_labels: [],
+        };
+        const template_name = String(template_payload.template_name || "").trim();
+        const template_cell = row.querySelector(".admin_checklist_template_name_cell_value");
+        if (template_cell) {
+            if (template_name) {
+                template_cell.textContent = template_name;
+                template_cell.classList.remove("is_placeholder");
+            } else {
+                template_cell.textContent = "시험체크리스트 열기";
+                template_cell.classList.add("is_placeholder");
+            }
+        }
+        const item_labels = Array.isArray(template_payload.item_labels)
+            ? template_payload.item_labels
+            : [];
+        admin_checklist_slot_field_names.forEach((field_name, index) => {
+            const input = row.querySelector(`[data-field="${field_name}"]`);
+            if (!input) {
+                return;
+            }
+            const label = String(item_labels[index] || "").trim() || `시험 항목 ${String(index + 1).padStart(2, "0")}`;
+            if ("placeholder" in input) {
+                input.placeholder = label;
+            }
+            input.setAttribute("title", label);
+        });
+    };
+
+    const build_admin_checklist_modal_field_html = (field_name, label, source_element) => {
+        const safe_label = String(label || "").replace(/"/g, "&quot;");
+        const safe_value = String((source_element && "value" in source_element ? source_element.value : source_element?.textContent || "") || "").replace(/"/g, "&quot;");
+        return `
+            <div class="form_stack">
+                <label>${label}</label>
+                <input data-admin-modal-field="${field_name}" type="text" value="${safe_value}" placeholder="${safe_label}" title="${safe_label}">
+            </div>
+        `;
+    };
+
+    const open_admin_checklist_modal = (row) => {
+        if (!admin_checklist_modal || !admin_checklist_modal_body || !row) {
+            return;
+        }
+        current_admin_checklist_modal_row = row;
+        const model_input = row.querySelector('[data-field="key_3"]');
+        const model_name = model_input ? String(model_input.value || "").trim() : "";
+        const template_payload = admin_model_checklist_template_payload_map[model_name] || {
+            template_name: "",
+            item_labels: [],
+        };
+        const item_labels = Array.isArray(template_payload.item_labels) ? template_payload.item_labels : [];
+        admin_checklist_modal_body.innerHTML = admin_checklist_slot_field_names
+            .map((field_name, index) => {
+                const source_element = row.querySelector(`[data-field="${field_name}"]`) || row.children[index + 6];
+                const fallback_label = `시험 항목 ${String(index + 1).padStart(2, "0")}`;
+                const label = String(item_labels[index] || "").trim() || fallback_label;
+                return build_admin_checklist_modal_field_html(field_name, label, source_element);
+            })
+            .join("");
+        admin_checklist_modal.style.display = "flex";
+        admin_checklist_modal.classList.add("is_open");
+        admin_checklist_modal.setAttribute("aria-hidden", "false");
+        if (row.classList.contains("admin_readonly_row") && save_admin_checklist_modal_button) {
+            save_admin_checklist_modal_button.style.display = "none";
+        } else if (save_admin_checklist_modal_button) {
+            save_admin_checklist_modal_button.style.display = "";
+        }
+    };
+
+    const close_admin_checklist_modal = () => {
+        if (!admin_checklist_modal) {
+            return;
+        }
+        admin_checklist_modal.classList.remove("is_open");
+        admin_checklist_modal.setAttribute("aria-hidden", "true");
+        admin_checklist_modal.style.display = "none";
+        current_admin_checklist_modal_row = null;
+    };
 
     const get_cell_preferred_width = (cell) => {
         if (cell && cell.classList && cell.classList.contains("review_status_cell")) {
@@ -599,7 +685,8 @@
             });
         });
 
-        const remembered_feature_target = localStorage.getItem(admin_feature_storage_key) || "__none__";
+        const default_feature_target = {% if qc_mode_enabled %}"all"{% else %}"__none__"{% endif %};
+        const remembered_feature_target = localStorage.getItem(admin_feature_storage_key) || default_feature_target;
         let initial_feature_target = remembered_feature_target;
         if (remembered_feature_target === "create_admin") {
             initial_feature_target = "admin_manage";
@@ -712,16 +799,10 @@
         { field: "form_submission_id", label: "양식제출ID", cell_index: 1 },
         { field: "key_1", label: "업체명", cell_index: 3 },
         { field: "key_2", label: "양식제출자", cell_index: 4 },
-        { field: "key_3", label: "모델명", cell_index: 5 },
-        { field: "key_4", label: "공정번호", cell_index: 6 },
-        { field: "field_01", label: "월", cell_index: 7 },
-        { field: "field_02", label: "검사대수", cell_index: 8 },
-        { field: "low_test_started_at", label: "저온 투입일", cell_index: 9 },
-        { field: "low_test_ended_at", label: "저온 완료일", cell_index: 10 },
-        { field: "low_test_delta", label: "저온 시간", cell_index: 11 },
-        { field: "high_test_started_at", label: "고온 투입일", cell_index: 12 },
-        { field: "high_test_ended_at", label: "고온 완료일", cell_index: 13 },
-        { field: "high_test_delta", label: "고온 시간", cell_index: 14 },
+        { field: "key_3", label: "모델명", cell_index: 6 },
+        { field: "key_4", label: "공정번호", cell_index: 7 },
+        { field: "field_01", label: "월", cell_index: 8 },
+        { field: "field_02", label: "검사대수", cell_index: 9 },
     ];
     const read_row_field_value = (row, spec) => {
         const input = row.querySelector(`[data-field="${spec.field}"]`);
@@ -1331,12 +1412,7 @@
         "low_test_started_at", "low_test_ended_at", "low_test_delta",
         "high_test_started_at", "high_test_ended_at", "high_test_delta",
     ]);
-    const timestamp_field_labels = {
-        low_test_started_at: "저온 투입일",
-        low_test_ended_at: "저온 완료일",
-        high_test_started_at: "고온 투입일",
-        high_test_ended_at: "고온 완료일",
-    };
+    const timestamp_field_labels = {};
     const timestamp_field_names = Object.keys(timestamp_field_labels);
     const admin_readonly_auto_calculated_fields = new Set(["low_test_delta", "high_test_delta"]);
 
@@ -1393,8 +1469,8 @@
         if (!is_row_dirty(row)) {
             return;
         }
-        if (!payload.key_1 || !payload.key_2 || !payload.key_3 || !payload.key_4) {
-            render_notice("업체명, 양식제출자, 모델명, 공정번호(키 4개)는 모두 필수입니다.", "error");
+        if (!payload.key_1 || !payload.key_2 || !payload.key_3 || !payload.key_4 || !payload.field_01 || !payload.field_02) {
+            render_notice("업체명, 양식제출자, 모델명, 공정번호, 월, 검사대수는 모두 필수입니다.", "error");
             return;
         }
         for (const field_name of timestamp_field_names) {
@@ -1422,6 +1498,7 @@
                 return;
             }
             row.dataset.initialPayload = serialize_payload(payload);
+            apply_admin_checklist_template_to_row(row);
             render_notice("수정 내용이 자동 저장되었습니다.", "success");
         } catch (_error) {
             render_notice("자동 저장 중 네트워크 오류가 발생했습니다.", "error");
@@ -1443,11 +1520,54 @@
         row_save_timers.set(row, timer_id);
     };
 
+    if (save_admin_checklist_modal_button) {
+        save_admin_checklist_modal_button.addEventListener("click", () => {
+            if (!current_admin_checklist_modal_row || !admin_checklist_modal_body) {
+                return;
+            }
+            admin_checklist_slot_field_names.forEach((field_name) => {
+                const modal_field = admin_checklist_modal_body.querySelector(`[data-admin-modal-field="${field_name}"]`);
+                const row_field = current_admin_checklist_modal_row.querySelector(`[data-field="${field_name}"]`);
+                if (!modal_field || !row_field || !("value" in modal_field) || !("value" in row_field)) {
+                    return;
+                }
+                row_field.value = modal_field.value;
+            });
+            apply_admin_checklist_template_to_row(current_admin_checklist_modal_row);
+            schedule_row_save(current_admin_checklist_modal_row);
+            close_admin_checklist_modal();
+        });
+    }
+
     document.querySelectorAll("tr.admin_editable_row").forEach((row) => {
         row.dataset.initialPayload = serialize_payload(build_row_payload(row));
         row.querySelectorAll("input[data-field]").forEach((input) => {
-            input.addEventListener("input", () => schedule_row_save(row));
-            input.addEventListener("change", () => schedule_row_save(row));
+            input.addEventListener("input", () => {
+                if (input.dataset.field === "key_3") {
+                    apply_admin_checklist_template_to_row(row);
+                }
+                schedule_row_save(row);
+            });
+            input.addEventListener("change", () => {
+                if (input.dataset.field === "key_3") {
+                    apply_admin_checklist_template_to_row(row);
+                }
+                schedule_row_save(row);
+            });
+        });
+        const open_button = row.querySelector(".admin_open_checklist_modal_button");
+        if (open_button) {
+            open_button.addEventListener("click", () => open_admin_checklist_modal(row));
+        }
+        apply_admin_checklist_template_to_row(row);
+    });
+    document.querySelectorAll("tr.admin_readonly_row .admin_open_checklist_modal_button").forEach((button) => {
+        button.addEventListener("click", () => {
+            const row = button.closest("tr.admin_readonly_row");
+            if (!row) {
+                return;
+            }
+            open_admin_checklist_modal(row);
         });
     });
 })();
@@ -1489,6 +1609,50 @@
 
         <button type="submit">항목 삭제</button>
     </form>
+</section>
+<section class="card" data-admin-feature-session="checklist_manage" style="display:none;">
+    <h3>시험체크리스트양식 관리</h3>
+    {% if checklist_templates is defined %}
+    <form method="post" action="/admin/checklist_templates/save" class="form_stack">
+        <label for="checklist_template_name_input">양식명칭</label>
+        <input id="checklist_template_name_input" name="template_name" type="text" placeholder='예: ELT ROOM CHECK SHEET (Rev_1)' required>
+        <label for="checklist_template_item_labels_textarea">시험 항목 라벨</label>
+        <textarea id="checklist_template_item_labels_textarea" name="item_labels_text" rows="15" placeholder="한 줄에 한 항목씩 입력해 주세요. 최대 15개"></textarea>
+        <button type="submit">양식 저장</button>
+    </form>
+    <form method="post" action="/admin/checklist_templates/model_map/save" class="form_stack dropdown_inline_form">
+        <label for="checklist_map_model_name">모델명</label>
+        <input id="checklist_map_model_name" name="model_name" type="text" placeholder="예: HBM-1" required>
+        <label for="checklist_map_template_name">양식명칭</label>
+        <select id="checklist_map_template_name" name="template_name" required>
+            <option value=""></option>
+            {% for template_row in checklist_templates %}
+            <option value="{{ template_row.template_name }}">{{ template_row.template_name }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">모델 매핑 저장</button>
+    </form>
+    <form method="post" action="/admin/checklist_templates/delete" class="form_stack dropdown_inline_form">
+        <label for="checklist_delete_template_name">양식명칭</label>
+        <select id="checklist_delete_template_name" name="template_name" required>
+            <option value=""></option>
+            {% for template_row in checklist_templates %}
+            <option value="{{ template_row.template_name }}">{{ template_row.template_name }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">양식 삭제</button>
+    </form>
+    <form method="post" action="/admin/checklist_templates/model_map/delete" class="form_stack dropdown_inline_form">
+        <label for="checklist_delete_model_name">모델명</label>
+        <select id="checklist_delete_model_name" name="model_name" required>
+            <option value=""></option>
+            {% for map_row in model_checklist_template_maps %}
+            <option value="{{ map_row.model_name }}">{{ map_row.model_name }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit">모델 매핑 삭제</button>
+    </form>
+    {% endif %}
 </section>
 <script>
 (() => {
@@ -1562,12 +1726,17 @@
         "key_4",
         "field_01",
         "field_02",
-        "low_test_started_at",
-        "low_test_ended_at",
-        "low_test_delta",
-        "high_test_started_at",
-        "high_test_ended_at",
-        "high_test_delta",
+        "field_03",
+        "field_04",
+        "field_05",
+        "field_06",
+        "field_07",
+        "field_10",
+        "field_11",
+        "field_12",
+        "field_13",
+        "field_14",
+        "field_18",
     ];
 
     const apply_row_snapshot = (row, snapshot) => {
@@ -1585,17 +1754,18 @@
                 input.value = String(snapshot[field_name] || "");
             }
         });
+        apply_admin_checklist_template_to_row(row);
         const review_toggle_button = row.querySelector(".admin_single_review_toggle_button");
         if (review_toggle_button) {
             const is_reviewed = !!snapshot.is_reviewed;
             review_toggle_button.textContent = is_reviewed ? "입력승인 삭제" : "입력승인";
             review_toggle_button.dataset.nextReviewed = is_reviewed ? "0" : "1";
         }
-        const created_cell = row.children[15];
+        const created_cell = row.children[21];
         if (created_cell) {
             created_cell.textContent = String(snapshot.created_at || "");
         }
-        const updated_cell = row.children[16];
+        const updated_cell = row.children[22];
         if (updated_cell) {
             updated_cell.textContent = String(snapshot.updated_at || "");
         }
